@@ -5493,7 +5493,7 @@ function lhTableauHtml(m, groups){
   var cols = rounds.map(function(g){
     return '<div class="tb-col"><div class="tb-h">' + esc(g.label) + (g.sub ? '<small>' + esc(g.sub) + '</small>' : '<small>&nbsp;</small>') + '</div><div class="tb-ms">' +
       g.entries.map(function(e){
-        if (!e || (!e.a && !e.b)) return '<div class="tb-m tb-empty">\u2014</div>';
+        if (!e || (!e.a && !e.b) || (e.deleted && !e.mid)) return '<div class="tb-m tb-empty">\u2014</div>';
         var x = e.mid ? lvFindMatch(m, e.mid) : null, r = e.mid ? m.results[e.mid] : null, hs = r && r.hasScore;
         var wa = r && r.final && r.scoreA > r.scoreB, wb = r && r.final && r.scoreB > r.scoreA;
         var na = x ? x.teamA : nm(e.a), nb = x ? x.teamB : (e.b ? nm(e.b) : '');
@@ -5842,6 +5842,10 @@ function lhResetDraw(){
 function lhTR(){ var t = LH.d.tr; if (!t || typeof t !== 'object') return null;
   if (!Array.isArray(t.rounds)) t.rounds = t.rounds ? Object.keys(t.rounds).sort(function(a,b){ return a-b; }).map(function(k){ return t.rounds[k]; }) : [];
   t.rounds.forEach(function(r){ if (r && r.pairs && !Array.isArray(r.pairs)) r.pairs = Object.keys(r.pairs).sort(function(a,b){ return a-b; }).map(function(k){ return r.pairs[k]; }); if (r && !r.pairs) r.pairs = []; });
+  // a deleted match leaves the draw too; a round with nothing left goes away
+  t.rounds = t.rounds.filter(function(r){ return r && typeof r === 'object'; });
+  t.rounds.forEach(function(r){ r.pairs = r.pairs.filter(function(p){ return p && (p.mid ? !!LH.d.matches[p.mid] : !p.b); }); });
+  t.rounds = t.rounds.filter(function(r){ return r.pairs.some(function(p){ return p.mid; }); });
   if (!t.podium || typeof t.podium !== 'object') t.podium = {};
   return t; }
 function lhTeamStrength(tid){ var d = LH.d, s = 0; ((d.teams[tid]||{}).members||[]).slice(0,3).forEach(function(f){ s += (d.fencers[f] && d.fencers[f].skill) || 0; }); return s; }
@@ -6034,7 +6038,7 @@ function lhAutoRound(){
     if (kind === 'team') rec = { fmt:'team', aRef:e.a, bRef:e.b, teamA:lhName(kind, e.a), teamB:lhName(kind, e.b) };
     else rec = { fmt:d.meta.fmt || 'senior', aRef:e.a, bRef:e.b, teamA:lhName(kind, e.a), teamB:lhName(kind, e.b) };
     rec.round = label; rec.weapon = d.meta.weapon; rec.piste = 0; rec.order = 0; rec.time = null;
-    d.matches[id] = rec; e.mid = id; ids.push(id);
+    d.matches[id] = rec; e.mid = id; delete e.deleted; ids.push(id);
   });
   var pistes = []; for (var q=from;q<=to;q++) pistes.push(q);
   lhSpread(ids, pistes);
@@ -6187,7 +6191,8 @@ function lhDeleteBout(id){
   askConfirm('Delete this bout? Any result uploaded for it will no longer show.', function(){
     var p = LH.d.matches[id] ? (LH.d.matches[id].piste||0) : 0;
     delete LH.d.matches[id]; lhRenumber(p);
-    var b = lhBracket(); if (b) b.rounds.forEach(function(r){ r.entries.forEach(function(e){ if (e.mid === id) e.mid = null; }); });
+    var b = lhBracket(); if (b) b.rounds.forEach(function(r){ r.entries.forEach(function(e){ if (e.mid === id){ e.mid = null; e.deleted = true; } }); });
+    lhTR();   // drops the match (and an emptied round) from the team draw
     lhDirty();
   });
 }
