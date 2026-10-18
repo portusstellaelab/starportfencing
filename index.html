@@ -474,6 +474,19 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 #breakTimeSheet{z-index:300;}
 #exitSaveSheet{z-index:80;}
 #confirmSheet{z-index:320;}
+.mv{margin-top:6px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.mv-r{display:grid;grid-template-columns:22px minmax(0,1fr) 40px 46px 40px minmax(0,1fr);gap:4px;align-items:center;padding:5px 5px;border-top:1px solid var(--border);}
+.mv-h{border-top:none;background:rgba(255,255,255,.04);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.mv-h span{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mv-h .mv-ta{color:var(--gold);font-weight:700;text-align:left;} .mv-h .mv-tb{color:var(--blue2);font-weight:700;text-align:right;}
+.mv-n{font-family:'DM Mono',monospace;font-size:13px;color:var(--white);text-align:center;line-height:1;}
+.mv-n small{display:block;font-size:9px;color:var(--muted);margin-top:2px;}
+.mv-f .ms-name select{width:100%;font-size:12px;padding:7px 3px;}
+.mv-f .ms-name input{font-size:12px;padding:6px 4px;}
+.mv-f.a .ms-name select{border-left:3px solid rgba(201,162,39,.8);}
+.mv-f.b .ms-name select{border-right:3px solid rgba(46,125,212,.85);}
+input.mv-num{width:100%;text-align:center;font-size:17px;padding:7px 0;}
+.mv .ms-run{margin:0;font-size:13px;font-weight:700;text-align:center;}
 .lm-h{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;font-size:15px;line-height:1.35;}
 .lm-h .lm-a{text-align:left;} .lm-h .lm-b{text-align:right;}
 .lm-h .lm-name.lose{color:var(--muted);}
@@ -3976,7 +3989,7 @@ function lvManualSheet(ctx){
   var html = '<div class="sheet-title">📝 Score sheet</div>' +
     '<div class="lv-sub" style="margin-top:0;">' + esc(x.teamA||'A') + ' v ' + esc(x.teamB||'B') + ' · ' + esc([x.round, x.piste ? 'Piste ' + x.piste : ''].filter(Boolean).join(' · ')) + '</div>';
   if (x.fmt === 'team'){
-    html += '<div class="lv-sub">Copy the paper sheet bout by bout: who fenced and the <b>touches scored in that bout</b>. The relay score is worked out for you. Swipe sideways for bouts 4\u20139. Leave unfenced bouts blank.</div>';
+    html += '<div class="lv-sub">Copy the paper sheet bout by bout: who fenced and the <b>touches scored in that bout</b>. The relay score is worked out for you. Leave unfenced bouts blank.</div>';
     var prevBouts = (r && r.bouts) || [], cols = [];
     for (var i=0;i<9;i++){
       var pb = prevBouts[i], fa = '', fb = '', sa = '', sb = '';
@@ -3984,15 +3997,17 @@ function lvManualSheet(ctx){
       if (pb){ fa = pb.fencerA || fa; fb = pb.fencerB || fb; if (pb.status==='done' || pb.ptsA || pb.ptsB){ sa = pb.ptsA; sb = pb.ptsB; } }
       cols.push({ fa:fa, fb:fb, sa:sa, sb:sb });
     }
-    function row(cls, label, cell){ var h = '<tr class="' + cls + '"><th>' + label + '</th>'; for (var k=0;k<9;k++) h += '<td>' + cell(k) + '</td>'; return h + '</tr>'; }
-    html += '<div class="mh-wrap"><table class="mh">' +
-      row('mh-head', 'Bout', function(k){ return '<b>' + (k+1) + '</b><small>to ' + ((k+1)*5) + '</small>'; }) +
-      row('mh-a', esc(x.teamA||'A'), function(k){ return msNameField('msFa' + k, x.rosterA, cols[k].fa); }) +
-      row('mh-a', 'Touches', function(k){ return '<input id="msA' + k + '" class="mh-num" type="number" inputmode="numeric" min="0" max="45" value="' + cols[k].sa + '" oninput="msRun()">'; }) +
-      row('mh-run', 'Relay score', function(k){ return '<div class="ms-run" id="msR' + k + '"></div>'; }) +
-      row('mh-b', 'Touches', function(k){ return '<input id="msB' + k + '" class="mh-num" type="number" inputmode="numeric" min="0" max="45" value="' + cols[k].sb + '" oninput="msRun()">'; }) +
-      row('mh-b', esc(x.teamB||'B'), function(k){ return msNameField('msFb' + k, x.rosterB, cols[k].fb); }) +
-      '</table></div><div class="ms-tot" id="msTot"></div>';
+    /* one line per bout, like the bout order: fencer | touches | relay | touches | fencer */
+    html += '<div class="mv"><div class="mv-r mv-h"><span>#</span><span class="mv-ta">' + esc(x.teamA||'A') + '</span><span>Pts</span><span>Relay</span><span>Pts</span><span class="mv-tb">' + esc(x.teamB||'B') + '</span></div>';
+    for (var k=0;k<9;k++){
+      html += '<div class="mv-r"><span class="mv-n">' + (k+1) + '<small>' + ((k+1)*5) + '</small></span>' +
+        '<span class="mv-f a">' + msNameField('msFa' + k, x.rosterA, cols[k].fa) + '</span>' +
+        '<input id="msA' + k + '" class="mv-num" type="number" inputmode="numeric" min="0" max="45" value="' + cols[k].sa + '" oninput="msRun()">' +
+        '<span class="ms-run" id="msR' + k + '"></span>' +
+        '<input id="msB' + k + '" class="mv-num" type="number" inputmode="numeric" min="0" max="45" value="' + cols[k].sb + '" oninput="msRun()">' +
+        '<span class="mv-f b">' + msNameField('msFb' + k, x.rosterB, cols[k].fb) + '</span></div>';
+    }
+    html += '</div><div class="ms-tot" id="msTot"></div>';
   } else {
     html += '<div style="display:flex;gap:10px;"><div style="flex:1;"><label>' + esc(x.teamA||'A') + '</label><input id="msA" type="number" inputmode="numeric" min="0" max="99" value="' + (r ? r.scoreA : '') + '"></div>' +
       '<div style="flex:1;"><label>' + esc(x.teamB||'B') + '</label><input id="msB" type="number" inputmode="numeric" min="0" max="99" value="' + (r ? r.scoreB : '') + '"></div></div>';
