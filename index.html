@@ -598,8 +598,9 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
 @media print{
   @page{margin:12mm;}
   body.pv-open > *:not(#printView){display:none !important;}
-  body.pv-open{background:#fff !important;}
-  #printView{position:static;background:#fff;overflow:visible;}
+  /* the app locks html/body to one screen (height:100%, overflow:hidden); a printout must flow over many pages */
+  html,body.pv-open{height:auto !important;min-height:0 !important;overflow:visible !important;position:static !important;background:#fff !important;}
+  body.pv-open #printView{position:static !important;inset:auto !important;display:block !important;height:auto !important;overflow:visible !important;background:#fff;}
   .pv-bar{display:none !important;}
   .pv-page{box-shadow:none;margin:0;max-width:none;padding:0;}
   .pv-grid tr{break-inside:avoid;}
