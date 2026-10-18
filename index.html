@@ -474,6 +474,21 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 #breakTimeSheet{z-index:300;}
 #exitSaveSheet{z-index:80;}
 #confirmSheet{z-index:320;}
+.lv-scanbtn{font-size:17px;padding:15px;margin:0 0 8px;}
+#qrScan{display:none;position:fixed;inset:0;z-index:520;background:#000;color:#fff;flex-direction:column;}
+#qrScan.on{display:flex;}
+.qs-bar{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-t,0px) + 10px) 12px 10px;background:#0a1628;}
+.qs-bar span{font-weight:600;}
+.qs-box{position:relative;flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.qs-box video{width:100%;height:100%;object-fit:cover;}
+.qs-frame{position:absolute;width:64vmin;height:64vmin;border:3px solid rgba(201,162,39,.9);border-radius:18px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);}
+.qs-msg{text-align:center;padding:12px 16px;font-size:14px;color:#dfe6ef;background:#0a1628;}
+.qs-row{padding:0 16px calc(var(--safe-b,0px) + 14px);background:#0a1628;}
+.qs-row label.btn{display:block;text-align:center;cursor:pointer;text-transform:none;letter-spacing:normal;font-size:15px;color:var(--white);margin:0;}
+.pv-podium{display:flex;flex-wrap:wrap;gap:8px 18px;margin:4px 0 12px;font-size:15px;}
+.pv-podium span{font-size:20px;margin-right:4px;}
+.pv-w{font-weight:700;color:#0a1628;}
+.pv-meta{font-size:11px;color:#666;white-space:nowrap;}
 .lv-stage{display:flex;gap:16px;margin:8px 0 0;}
 .lv-stage .lv-check{margin:0;}
 .lv-subtabs{margin:4px 0 10px;overflow-x:auto;flex-wrap:nowrap;}
@@ -657,18 +672,20 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
 <section class="view" id="liveHome">
   <div class="lv-head"><button class="btn btn-ghost btn-sm" onclick="show('home')">&larr; Home</button><span class="logo-main" style="font-size:22px;">FENCING LIVE</span></div>
   <div id="lvNotice"></div>
+  <button class="btn btn-gold btn-block lv-scanbtn" onclick="qrScanOpen()">&#128247; Scan QR code</button>
+  <div class="lv-sub" style="text-align:center;margin:-2px 0 12px;">Fencers, referees and committee: scan the code you were given and the right screen opens.</div>
   <div class="lv-card">
     <div class="lv-team-name" style="margin-bottom:8px;">&#128064; View an event</div>
     <div style="display:flex;gap:8px;"><input id="lvCodeIn" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Event code"><button class="btn btn-gold" onclick="lvOpenViewFromInput()">Open</button></div>
   </div>
   <div class="lv-card">
-    <div class="lv-team-name" style="margin-bottom:8px;">&#127941; Host an event</div>
-    <div class="live-actions" style="margin:0;"><button class="btn btn-gold" onclick="lhCreateSheet()">Create new event</button><button class="btn btn-ghost" onclick="lhOpenSheet()">Open my event</button></div>
+    <div class="lv-team-name" style="margin-bottom:8px;">&#129489;&#8205;&#9878;&#65039; Referee an event</div>
+    <div class="lv-sub" style="margin-top:0;">See the full schedule, change fencers in a team&#8217;s bout order, and pick the bouts you referee. Scan the referee QR, or use the code and referee PIN.</div>
+    <button class="btn btn-gold btn-block" onclick="lvRefSheet()">Referee an event</button>
   </div>
   <div class="lv-card">
-    <div class="lv-team-name" style="margin-bottom:8px;">&#129489;&#8205;&#9878;&#65039; Referee an event</div>
-    <div class="lv-sub" style="margin-top:0;">See the full schedule, change fencers in a team&#8217;s bout order, and pick the bouts you referee. You need the referee PIN from the host.</div>
-    <button class="btn btn-gold btn-block" onclick="lvRefSheet()">Referee an event</button>
+    <div class="lv-team-name" style="margin-bottom:8px;">&#127941; Host an event</div>
+    <div class="live-actions" style="margin:0;"><button class="btn btn-gold" onclick="lhCreateSheet()">Create new event</button><button class="btn btn-ghost" onclick="lhOpenSheet()">Open my event</button></div>
   </div>
   <div id="lvRecent"></div>
 </section>
@@ -1016,6 +1033,11 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
 
 <div class="sheet" id="lvSheet"><div class="sheet-in" id="lvSheetIn"></div></div>
 <div id="printView"></div>
+<div id="qrScan"><div class="qs-bar"><button class="btn btn-ghost btn-sm" onclick="qrScanClose()">&larr; Close</button><span>Scan QR code</span></div>
+  <div class="qs-box"><video id="qsVideo" playsinline muted></video><div class="qs-frame"></div></div>
+  <div class="qs-msg" id="qsMsg">Point the camera at the QR code.</div>
+  <div class="qs-row"><label class="btn btn-ghost btn-block">&#128444; Use a photo of the code<input type="file" accept="image/*" id="qsFile" style="display:none;" onchange="qrScanFile(this)"></label></div>
+</div>
 
 <div class="sheet" id="settingsSheet">
   <div class="sheet-in">
@@ -1527,6 +1549,7 @@ function addPoint(side){
     toast('Viewing bout ' + (viewIdx()+1) + ' \u2014 tap Edit to change its score');
     return;
   }
+  if (atTargetCap()) return;
   if (M.relay){
     var ab = activeBout();
     if (side==='A'){ ab.ptsA++; M.scoreA++; } else { ab.ptsB++; M.scoreB++; }
@@ -1545,6 +1568,19 @@ function addPoint(side){
   triggerScoreFx(side);
 }
 
+/* Never score past the target: in a team relay each bout stops at 5, 10, 15 … 45
+   (fast double taps used to give 6–x). Returns true (and says why) when a touch must be ignored. */
+function atTargetCap(){
+  var t = M.relay ? (activeBout() || {}).target : M.target;
+  if (!t) return false;
+  if (M.scoreA >= t || M.scoreB >= t){
+    var lead = M.scoreA >= t ? M.teamA : M.teamB;
+    toast(M.relay ? 'Bout ' + activeBout().boutNum + ' is over at ' + t + ' (' + lead + ') \u2014 go to the next bout' : lead + ' reached ' + t + ' \u2014 the bout is over');
+    try { if (M.relay && !isScoringLocked()){ if (M.scoreA >= M.target || M.scoreB >= M.target) promptEndBout(); else promptBoutComplete(); } } catch(e){}
+    return true;
+  }
+  return false;
+}
 /* Epee only: simultaneous touch scores for both fencers. */
 function addDouble(){
   if (!M || M.status==='complete') return;
@@ -1554,6 +1590,7 @@ function addDouble(){
     toast('Viewing bout ' + (viewIdx()+1) + ' \u2014 tap Edit to change its score');
     return;
   }
+  if (atTargetCap()) return;
   if (M.relay){
     var ab = M.bouts[activeIdx()];
     ab.ptsA++; M.scoreA++;
@@ -2615,7 +2652,7 @@ function renderHistory(){
   for (var i=0;i<list.length;i++){
     var m = list[i];
     var d = new Date(m.savedAt);
-    var date = d.toLocaleDateString(undefined,{day:'numeric',month:'short'}) + ' \u00b7 ' + d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+    var date = d.toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + ' \u00b7 ' + d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
     var aw = m.scoreA>m.scoreB, bw = m.scoreB>m.scoreA;
     html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:9px;display:flex;align-items:center;gap:10px;" onclick="viewSavedMatch(' + m.id + ')">' +
       '<div style="flex:1;min-width:0;">' +
@@ -2851,7 +2888,7 @@ function boutImportSheet(r){
   var dupe = list.filter(function(x){ return x.imported && x.teamA===r.teamA && x.teamB===r.teamB && x.scoreA===r.scoreA && x.scoreB===r.scoreB && x.savedAt===r.savedAt; })[0];
   lvSheet('<div class="sheet-title">📥 A bout from ' + esc(r.referee || 'the referee') + '</div>' +
     '<div class="champion-banner" style="margin:6px 0 10px;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;">' + esc(r.teamA) + ' ' + r.scoreA + ' – ' + r.scoreB + ' ' + esc(r.teamB) + '</div>' +
-    '<div style="color:var(--muted);font-size:12px;margin-top:4px;">' + esc([r.label, r.weaponName, r.fmtName, new Date(r.savedAt).toLocaleDateString()].filter(Boolean).join(' · ')) + '</div></div>' +
+    '<div style="color:var(--muted);font-size:12px;margin-top:4px;">' + esc([r.label, r.weaponName, r.fmtName, new Date(r.savedAt).toLocaleDateString('en-AU')].filter(Boolean).join(' · ')) + '</div></div>' +
     '<div class="lv-sub" style="margin-top:0;line-height:1.5;">Save it to <b>Saved matches</b> on this phone. You get every touch with its time on the clock — open the bout while you watch your video, find each touch by its time, and type what you see under it. Your notes stay on this phone only.</div>' +
     (dupe ? '<div class="lv-sub">You already saved this bout.</div>' : '') +
     '<div class="sheet-row" style="flex-direction:column;gap:8px;"><button class="btn btn-gold btn-block" id="biSave">' + (dupe ? 'Open my copy' : 'Save to my matches') + '</button>' +
@@ -2912,7 +2949,7 @@ function buildTeamResultCanvas(rec){
 
   ctx.fillStyle = '#7a8a9e';
   ctx.font = '500 25px ' + FONT;
-  var dateStr = new Date(rec.savedAt||Date.now()).toLocaleDateString();
+  var dateStr = new Date(rec.savedAt||Date.now()).toLocaleDateString('en-AU');
   var head = [rec.weaponName||'', rec.fmtName, dateStr].filter(Boolean).join('  \u00b7  ');
   ctx.fillText(head, W/2, 132);
   if (recLabelLine(rec)){ ctx.fillStyle = '#5a6069'; ctx.font = '500 24px ' + FONT; ctx.fillText(recLabelLine(rec), W/2, 168); }
@@ -3048,7 +3085,7 @@ function buildResultCanvas(rec){
 
   ctx.fillStyle = '#7a8a9e';
   ctx.font = '500 26px Helvetica,Arial,sans-serif';
-  var dateStr = new Date(rec.savedAt||Date.now()).toLocaleDateString();
+  var dateStr = new Date(rec.savedAt||Date.now()).toLocaleDateString('en-AU');
   ctx.fillText(rec.fmtName + '  \u00b7  ' + dateStr, W/2, 140);
 
   ctx.fillStyle = '#c9a227';
@@ -3208,7 +3245,7 @@ function buildTimelineText(rec){
   if (affA) lines.push(rec.teamA + ': ' + affA);
   if (affB) lines.push(rec.teamB + ': ' + affB);
   lines.push((rec.weaponName||'') + ' \u00b7 ' + rec.fmtName + ' \u00b7 ' + rec.target + 'pts');
-  lines.push(new Date(rec.savedAt||Date.now()).toLocaleString());
+  lines.push(new Date(rec.savedAt||Date.now()).toLocaleString('en-AU'));
   lines.push('');
 
   var winner = rec.scoreA>rec.scoreB ? rec.teamA : (rec.scoreB>rec.scoreA ? rec.teamB : 'Tied match');
@@ -3740,7 +3777,7 @@ function renderLivePanel(){
   el.innerHTML = '<div class="live-card">' +
     '<div class="live-head"><span class="live-dot"></span><span class="live-title">' + esc(liveConn.eventName) + '</span>' +
       '<span class="lr-chip">' + esc(liveConn.code) + '</span></div>' +
-    '<div class="live-sub">Tap a bout to open it in the scoreboard, or \u22EF for withdrawals, moving a bout or a paper score sheet. Updated ' + new Date(liveConn.fetchedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) + '.</div>' +
+    '<div class="live-sub">Tap a bout to open it in the scoreboard, or \u22EF for withdrawals, moving a bout or a paper score sheet. Updated ' + new Date(liveConn.fetchedAt).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + '.</div>' +
     banner +
     '<select style="margin-bottom:8px;" onchange="liveSetPiste(this.value)">' + pisteOpts + '</select>' +
     '<div class="live-list">' + rows + '</div>' +
@@ -3836,7 +3873,7 @@ function liveLoadMatch(id){
     if (!rr[0].ok) toast('Could not check the referee lock (' + liveReason(rr[0]) + ') — opening anyway');
     if (c && c.status === 'active' && c.device !== liveDeviceId() && m.rs !== 'done'){
       lvSheet('<div class="sheet-title">🔒 ' + esc(c.ref) + ' is refereeing this bout</div>' +
-        '<div class="lv-sub" style="margin-top:0;">Only one referee scores a bout at a time. Ask ' + esc(c.ref) + ' to tap <b>🤝 Hand over</b> on their scoreboard — it saves and uploads the score so you can carry on.<br><br>Only take over if they cannot (phone flat, they had to leave). Locked since ' + new Date(c.at||Date.now()).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) + '.</div>' +
+        '<div class="lv-sub" style="margin-top:0;">Only one referee scores a bout at a time. Ask ' + esc(c.ref) + ' to tap <b>🤝 Hand over</b> on their scoreboard — it saves and uploads the score so you can carry on.<br><br>Only take over if they cannot (phone flat, they had to leave). Locked since ' + new Date(c.at||Date.now()).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + '.</div>' +
         '<div class="sheet-row" style="flex-direction:column;gap:8px;"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">OK, I\'ll wait</button>' +
         '<button class="btn btn-ghost btn-block" style="color:#f0c000;border-color:rgba(240,192,0,.45);" id="lvTakeOver">Take over from ' + esc(c.ref) + '</button></div>');
       document.getElementById('lvTakeOver').onclick = function(){ lvCloseSheet(); offerResume(); };
@@ -3993,7 +4030,7 @@ function msNameField(id, roster, val){
 function msNamePick(id){
   var sel = document.getElementById(id + 's'), inp = document.getElementById(id); if (!sel || !inp) return;
   var o = sel.value === '__o'; inp.style.display = o ? 'block' : 'none';
-  if (o) setTimeout(function(){ try { inp.focus(); } catch(e){} }, 30);
+  if (o) setTimeout(function(){ try { var ae = document.activeElement; if (!ae || ae === sel || ae === document.body) inp.focus(); } catch(e){} }, 30);   // never steal focus from a box the user moved to
 }
 function msName(id){
   var sel = document.getElementById(id + 's');
@@ -4323,7 +4360,7 @@ function renderLiveLine(){
   el.onclick = null;
   if (st && st.state==='sending') txt += 'uploading…';
   else if (ob[key]){ txt += '⚠ not uploaded — tap to retry'; cls += ' fail'; el.onclick = function(){ liveSendKey(key).then(function(r){ if (r) toast(r.ok ? '✓ Uploaded' : 'Still not uploaded (' + r.reason + ')'); }); }; }
-  else if (st && st.state==='ok'){ txt += '✓ uploaded ' + new Date(st.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); cls += ' ok'; }
+  else if (st && st.state==='ok'){ txt += '✓ uploaded ' + new Date(st.at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); cls += ' ok'; }
   else txt += 'score so far uploads automatically';
   el.className = cls; el.textContent = txt; el.style.display = 'block';
 }
@@ -4372,7 +4409,7 @@ function autoResumeCheck(){
   if (M) return;
   var x = rec.m;
   lvSheet('<div class="sheet-title">⏸ Unfinished bout</div>' +
-    '<div class="lv-sub" style="margin-top:0;">The app closed in the middle of a bout. It was saved on this phone at ' + new Date(rec.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) + ':</div>' +
+    '<div class="lv-sub" style="margin-top:0;">The app closed in the middle of a bout. It was saved on this phone at ' + new Date(rec.at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + ':</div>' +
     '<div class="champion-banner" style="margin:6px 0 10px;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;">' + esc(x.teamA) + ' ' + (x.scoreA|0) + ' – ' + (x.scoreB|0) + ' ' + esc(x.teamB) + '</div>' +
     '<div style="color:var(--muted);font-size:12px;margin-top:4px;">' + esc([x.label, x.fmtName, x.live ? '📡 ' + (x.live.eventName||'Fencing Live') : ''].filter(Boolean).join(' · ')) + '</div></div>' +
     '<div class="sheet-row" style="flex-direction:column;gap:8px;"><button class="btn btn-gold btn-block" onclick="autoResume()">Carry on scoring</button>' +
@@ -4541,7 +4578,9 @@ function lvExpiry(date, createdAt){
   if (!base) base = createdAt || Date.now();
   return base + LV_KEEP_DAYS * 86400000;
 }
-function lvExpiryText(ms){ try { return new Date(ms).toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'}); } catch(e){ return ''; } }
+/* event dates are stored as YYYY-MM-DD; show them the Australian way: 18/10/2026 */
+function auDate(iso){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||'')); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso||''); }
+function lvExpiryText(ms){ try { return new Date(ms).toLocaleDateString('en-AU',{weekday:'short', day:'numeric', month:'short'}); } catch(e){ return ''; } }
 /* Anyone may remove an expired event (the database rules allow it), so data never outlives its 7 days. */
 function lvRemoveExpired(code){
   var body = {}; body['events/' + sId(code)] = null; body['secrets/' + sId(code)] = null;
@@ -4585,7 +4624,7 @@ function lvCopyFallback(text){
 function lvSheet(html){ var el = document.getElementById('lvSheetIn'); if (el) el.innerHTML = html; openSheet('lvSheet'); }
 function lvCloseSheet(){ closeSheet('lvSheet'); }
 function lvVal(id){ var e = document.getElementById(id); return e ? e.value : ''; }
-function lvDateStr(ts){ try { return new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}); } catch(e){ return ''; } }
+function lvDateStr(ts){ try { return new Date(ts).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); } catch(e){ return ''; } }
 
 /* ---------- live data stream (Firebase REST streaming, polling fallback) ---------- */
 function lvSetPath(tree, segs, val){
@@ -5084,7 +5123,7 @@ function lhFencersHtml(){
   } else html += '<div class="lv-sub">' + ids.length + ' fencer' + (ids.length>1?'s':'') + '. Skill (1–5) is used to balance teams.</div>';
   ids.forEach(function(id){
     var f = d.fencers[id], c = ci[id];
-    var tag = f.absent ? '<span class="lr-chip off">absent</span>' : (st ? (c ? '<button class="lr-chip ok lv-citap" onclick="event.stopPropagation();lhCheckinToggle(\'' + id + '\')">\u2713 ' + new Date(c.at||0).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) + '</button>' : '<button class="lr-chip lv-citap" onclick="event.stopPropagation();lhCheckinToggle(\'' + id + '\')">Check in</button>') : '<span class="lv-stars">' + lhStars(f.skill||3) + '</span>');
+    var tag = f.absent ? '<span class="lr-chip off">absent</span>' : (st ? (c ? '<button class="lr-chip ok lv-citap" onclick="event.stopPropagation();lhCheckinToggle(\'' + id + '\')">\u2713 ' + new Date(c.at||0).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + '</button>' : '<button class="lr-chip lv-citap" onclick="event.stopPropagation();lhCheckinToggle(\'' + id + '\')">Check in</button>') : '<span class="lv-stars">' + lhStars(f.skill||3) + '</span>');
     html += '<div class="live-row' + (f.absent ? ' off' : '') + '" onclick="lhFencerSheet(\'' + id + '\')"><div class="lr-main"><div class="lr-names">' + esc(f.name) + '</div>' +
       '<div class="lr-meta">' + esc([f.country, f.club, st ? 'skill ' + (f.skill||3) : ''].filter(Boolean).join(' · ') || '—') + '</div></div>' + tag + '</div>';
   });
@@ -6412,11 +6451,13 @@ function lhShareLink(kind){
 function lhPrintCard(){
   var team = lhModel().teams.length > 0;
   return '<div class="lv-card"><b>🖨 Print or save (PDF / picture)</b><div class="lv-sub" style="margin-top:2px;">Each opens a page you can print, save as PDF or save as a picture.</div>' +
+    '<label class="lv-check" style="margin:8px 0 0;"><input type="checkbox" ' + (LH.printBouts === false ? '' : 'checked') + ' onchange="LH.printBouts=this.checked"> Results: include each bout\u2019s details (fencers and bout scores)</label>' +
     '<div class="lv-pbtns">' +
       '<button class="btn btn-ghost" onclick="lhPrint(\'info\')">📄 Event info &amp; fencer QR</button>' +
       '<button class="btn btn-ghost" onclick="lhPrint(\'checkin\')">✅ Check-in list</button>' +
       (team ? '<button class="btn btn-ghost" onclick="lhPrint(\'teams\')">👥 Teams</button>' : '') +
       '<button class="btn btn-ghost" onclick="lhPrint(\'schedule\')">📋 Bout schedule</button>' +
+      '<button class="btn btn-ghost" onclick="lhPrint(\'results\')">🏆 Results</button>' +
       (LH.refPin ? '<button class="btn btn-ghost" onclick="lhPrint(\'ref\')">🧑\u200d⚖️ Referee card</button>' : '') +
       '<button class="btn btn-ghost" onclick="lhPrint(\'host\')">🏅 Host card</button>' +
     '</div></div>';
@@ -6428,8 +6469,8 @@ function lhPrint(kind){
   if (LH.dirty) toast('Printing your latest changes \u2014 remember to Publish them too');
   var wName = (WEAPONS.filter(function(w){ return w.id===meta.weapon; })[0]||{}).name || '';
   var head = '<div class="pv-head"><div class="pv-title">' + pvEsc(meta.name) + '</div><div class="pv-meta">' +
-    pvEsc([meta.date, meta.time, meta.venue, wName].filter(Boolean).join(' \u00b7 ')) + ' \u00b7 Event code <b>' + pvEsc(LH.code) + '</b></div></div>';
-  var foot = '<div class="pv-foot">Starport Fencing Live \u00b7 printed ' + new Date().toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</div>';
+    pvEsc([auDate(meta.date), meta.time, meta.venue, wName].filter(Boolean).join(' \u00b7 ')) + ' \u00b7 Event code <b>' + pvEsc(LH.code) + '</b></div></div>';
+  var foot = '<div class="pv-foot">Starport Fencing Live \u00b7 printed ' + new Date().toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</div>';
   var title = '';
   if (kind === 'info' || kind === 'ref' || kind === 'host'){
     var ref = kind === 'ref';
@@ -6446,6 +6487,24 @@ function lhPrint(kind){
         '<tr><th>Bouts</th><td>' + m.matches.length + '</td></tr>' +
         '<tr><th>Pistes</th><td>' + (lvPistesUsed(m.matches).filter(Boolean).join(', ') || meta.pistes) + '</td></tr></table>' +
         '<div class="pv-note">No app needed: open the link from the QR code, or go to ' + pvEsc(lvBaseUrl()) + ' and enter code <b>' + pvEsc(LH.code) + '</b>.</div>');
+  } else if (kind === 'results'){
+    title = 'Results';
+    var withBouts = LH.printBouts !== false, rk = lhRankingList(m), team = rk.team;
+    var medal = { g:'\uD83E\uDD47', s:'\uD83E\uDD48', b:'\uD83E\uDD49' };
+    html = head + '<div class="pv-h2">Results</div>';
+    var pod = rk.list.filter(function(x){ return x.md; });
+    if (pod.length) html += '<div class="pv-podium">' + pod.map(function(x){ return '<div><span>' + medal[x.md] + '</span><b>' + pvEsc(x.name) + '</b></div>'; }).join('') + '</div>';
+    if (rk.list.length) html += '<div class="pv-piste">Ranking</div><table class="pv-t pv-grid"><tr><th>#</th><th>' + (team ? 'Team' : 'Fencer') + '</th><th>W/M</th><th>TS</th><th>TR</th><th>Ind</th></tr>' +
+      rk.list.map(function(x, i){ return '<tr><td class="pv-c">' + (i+1) + '</td><td><b>' + pvEsc(x.name) + '</b>' + (x.md ? ' ' + medal[x.md] : '') + '</td><td class="pv-c">' + x.v + '/' + x.m + '</td><td class="pv-c">' + x.ts + '</td><td class="pv-c">' + x.tr + '</td><td class="pv-c">' + (x.ind > 0 ? '+' : '') + x.ind + '</td></tr>'; }).join('') + '</table>';
+    var groups = []; try { groups = lhRoundGroups(m); } catch(e){}
+    if (!groups.length) groups = [{ label:'Matches', sub:'', ids:m.matches.map(function(x){ return x.id; }) }];
+    groups.forEach(function(g){
+      var xs = g.ids.map(function(id){ return lvFindMatch(m, id); }).filter(Boolean);
+      if (!xs.length) return;
+      html += '<div class="pv-piste">' + pvEsc(g.label + (g.sub ? ' \u00b7 ' + g.sub : '')) + '</div>';
+      if (withBouts && xs.some(function(x){ return x.fmt === 'team'; })) html += xs.map(function(x){ return x.fmt === 'team' ? pvMatchBlock(m, x) : pvResultLine(m, x); }).join('');
+      else html += '<table class="pv-t pv-grid">' + xs.map(function(x){ return pvResultLine(m, x, true); }).join('') + '</table>';
+    });
   } else if (kind === 'checkin'){
     title = 'Check-in list';
     var tmap = {}; m.teams.forEach(function(t){ t.members.forEach(function(f){ tmap[f.id] = t.name; }); });
@@ -6487,6 +6546,26 @@ function lhPrint(kind){
     }).join('') + (m.matches.length ? '' : '<div class="pv-note">No bouts yet.</div>');
   }
   pvOpen(title, html + foot, kind);
+}
+/* ranking list shared by the Results tab and the results printout */
+function lhRankingList(m){
+  var team = LH.d.meta.type === 'teams' || (LH.d.meta.type !== 'individual' && m.teams.length > 0);
+  var list = lvStandings(m, team), byName = {};
+  list.forEach(function(x){ byName[x.name] = x; });
+  var pool = lhMedalPool(), idOf = {};
+  pool.forEach(function(p){ idOf[p.name] = p.id; if (!byName[p.name]){ var z = { name:p.name, v:0, m:0, ts:0, tr:0, ind:0, ratio:0 }; list.push(z); byName[p.name] = z; } });
+  var tr = lhTR(), pd = (tr && tr.podium) || {}, br = pd.bronze || [];
+  function medal(id){ return id === pd.gold ? 'g' : (id === pd.silver ? 's' : (br.indexOf(id) >= 0 ? 'b' : '')); }
+  var rank = { g:0, s:1, b:2, '':3 };
+  list.forEach(function(x){ x.md = medal(idOf[x.name]); });
+  list.sort(function(a,b){ return (rank[a.md] - rank[b.md]) || (b.v - a.v) || (b.ind - a.ind) || (b.ts - a.ts) || a.name.localeCompare(b.name); });
+  return { team:team, list:list };
+}
+function pvResultLine(m, x, row){
+  var r = m.results[x.id], hs = r && r.hasScore, wa = r && r.final && r.scoreA > r.scoreB, wb = r && r.final && r.scoreB > r.scoreA;
+  var st = lhStageText(x.stage);
+  var cells = '<td' + (wa ? ' class="pv-w"' : '') + '>' + pvEsc(x.teamA||'TBC') + '</td><td class="pv-c pv-sc">' + (hs ? r.scoreA + '\u2013' + r.scoreB + (r.final ? '' : ' *') : (r && r.cancelled ? 'withdrawn' : '\u2014')) + '</td><td' + (wb ? ' class="pv-w"' : '') + '>' + pvEsc(x.teamB||'TBC') + (st ? ' <span class="pv-meta">' + pvEsc(st) + '</span>' : '') + '</td>';
+  return row ? '<tr>' + cells + '</tr>' : '<table class="pv-t pv-grid" style="margin-bottom:8px;"><tr>' + cells + '</tr></table>';
 }
 /* one team match on paper: header, both line-ups side by side, then one line per bout */
 function pvMatchBlock(m, x){
@@ -6734,6 +6813,87 @@ function lvRefPaper(id){
   lvCloseSheet();
   lvManualSheet({ code:LV.code, pin:liveConn.pin, by:liveConn.ref, match:x, result:(r && r.hasScore) ? r : null });
 }
+/* ---------- in-app QR scanner: one button for fencers, referees and committee ----------
+   The QR codes are Starport links (#view= / #checkin= / #ref= / #host= / #bout= / #live=),
+   so a scan simply opens that link here: viewers get the event, referees get referee
+   access (PIN inside the code), committee gets host access. */
+var QS = null;
+function qrLoadDecoder(cb){
+  if (window.jsQR) return cb(true);
+  var sc = document.createElement('script');
+  sc.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+  sc.onload = function(){ cb(!!window.jsQR); }; sc.onerror = function(){ cb(false); };
+  document.head.appendChild(sc);
+}
+function qrMsg(t){ var el = document.getElementById('qsMsg'); if (el) el.textContent = t; }
+function qrScanOpen(){
+  var ov = document.getElementById('qrScan'); ov.classList.add('on');
+  qrMsg('Starting the camera\u2026');
+  QS = { stream:null, timer:null, det:null, busy:false, canvas:document.createElement('canvas') };
+  try { if ('BarcodeDetector' in window) QS.det = new window.BarcodeDetector({ formats:['qr_code'] }); } catch(e){ QS.det = null; }
+  if (!QS.det) qrLoadDecoder(function(){});
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ qrMsg('This phone\u2019s browser can\u2019t use the camera here \u2014 use a photo of the code, or the phone\u2019s own camera app.'); return; }
+  navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false }).then(function(stream){
+    if (!QS){ stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+    QS.stream = stream;
+    var v = document.getElementById('qsVideo'); v.srcObject = stream; v.setAttribute('playsinline', ''); 
+    var p = v.play(); if (p && p.catch) p.catch(function(){});
+    qrMsg('Point the camera at the QR code.');
+    QS.timer = setInterval(qrTick, 250);
+  }).catch(function(){
+    qrMsg('No camera access. Allow the camera for this app, or use a photo of the code.');
+  });
+}
+function qrScanClose(){
+  if (QS){ clearInterval(QS.timer); if (QS.stream) QS.stream.getTracks().forEach(function(t){ t.stop(); }); }
+  QS = null;
+  var v = document.getElementById('qsVideo'); if (v) v.srcObject = null;
+  document.getElementById('qrScan').classList.remove('on');
+}
+function qrDecodeFrom(src, w, h, done){
+  if (QS && QS.det){
+    QS.det.detect(src).then(function(codes){ done(codes && codes.length ? codes[0].rawValue : null); }, function(){ done(null); });
+    return;
+  }
+  if (!window.jsQR){ done(null); return; }
+  try {
+    var c = (QS && QS.canvas) || document.createElement('canvas'), sc = Math.min(1, 900 / Math.max(w, h));
+    c.width = Math.round(w * sc); c.height = Math.round(h * sc);
+    var ctx = c.getContext('2d'); ctx.drawImage(src, 0, 0, c.width, c.height);
+    var img = ctx.getImageData(0, 0, c.width, c.height), r = window.jsQR(img.data, c.width, c.height, { inversionAttempts:'dontInvert' });
+    done(r ? r.data : null);
+  } catch(e){ done(null); }
+}
+function qrTick(){
+  if (!QS || QS.busy) return;
+  var v = document.getElementById('qsVideo');
+  if (!v || v.readyState < 2 || !v.videoWidth) return;
+  QS.busy = true;
+  qrDecodeFrom(v, v.videoWidth, v.videoHeight, function(text){ if (QS) QS.busy = false; if (text) qrGot(text); });
+}
+function qrScanFile(inp){
+  var f = inp.files && inp.files[0]; if (!f) return;
+  qrMsg('Reading the photo\u2026');
+  var img = new Image(), url = URL.createObjectURL(f);
+  img.onload = function(){
+    function go(){ qrDecodeFrom(img, img.naturalWidth, img.naturalHeight, function(text){ URL.revokeObjectURL(url); if (text) qrGot(text); else qrMsg('No QR code found in that photo. Try again closer, with the whole code in view.'); }); }
+    if (QS && QS.det) go(); else qrLoadDecoder(function(ok){ if (ok) go(); else qrMsg('Could not load the QR reader \u2014 check the internet.'); });
+  };
+  img.src = url; inp.value = '';
+}
+function qrGot(text){
+  text = String(text || '');
+  var h = text.indexOf('#') >= 0 ? text.slice(text.indexOf('#')) : '';
+  if (!/(view|checkin|ref|host|bout|live)=/.test(h)){
+    qrMsg('That QR code isn\u2019t a Starport Fencing code. Ask the host for the event QR.');
+    try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){}
+    return;
+  }
+  qrScanClose();
+  try { if (navigator.vibrate) navigator.vibrate(40); } catch(e){}
+  try { history.replaceState(null, '', location.pathname + h); } catch(e){}
+  try { if (!boutHandleLink() && !lvHandleLink()) liveHandleLink(); } catch(e){ toast('Could not open that code'); }
+}
 function lvOpenViewFromInput(){
   var code = parseLiveInput(lvVal('lvCodeIn')).code;
   if (code.length !== 6){ toast('Event codes have 6 characters'); return; }
@@ -6779,7 +6939,7 @@ function lvvRender(){
   var opts = '<option value="">Find me…</option>' + nameList.map(function(n){ return '<option value="' + escAttr(n) + '"' + (n===LV.me?' selected':'') + '>' + esc(n) + '</option>'; }).join('');
   if (m.meta.expired){ head.textContent = m.meta.name; if (!LV.expiredSeen){ LV.expiredSeen = true; lvForget(LV.code, 'view'); lvRemoveExpired(LV.code); } body.innerHTML = '<div class="lv-empty">This event finished more than ' + LV_KEEP_DAYS + ' days ago and its data has been removed.</div>'; return; }
   var html = (m.meta.venue || m.meta.time ? '<div class="lv-venue">' + (m.meta.time ? '\u23F0 ' + esc(m.meta.time) + '  ' : '') + (m.meta.venue ? '\uD83D\uDCCD ' + esc(m.meta.venue) : '') + '</div>' : '') +
-    '<div class="lv-sub" style="margin-top:0;">' + esc([m.meta.date, (WEAPONS.filter(function(w){ return w.id===m.meta.weapon; })[0]||{}).name, (function(){ var n = lvPistesUsed(m.matches).filter(Boolean).length || m.meta.pistes; return n + ' piste' + (n>1?'s':''); })()].filter(Boolean).join(' · ')) + (m.meta.locked ? ' · 🔒 final' : '') + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">' + esc([auDate(m.meta.date), (WEAPONS.filter(function(w){ return w.id===m.meta.weapon; })[0]||{}).name, (function(){ var n = lvPistesUsed(m.matches).filter(Boolean).length || m.meta.pistes; return n + ' piste' + (n>1?'s':''); })()].filter(Boolean).join(' · ')) + (m.meta.locked ? ' · 🔒 final' : '') + '</div>' +
     (lvIsRef() ? '<select style="margin-bottom:10px;" onchange="lvRefSetName(this.value)">' + (function(){ var rl = lvRefList(LV.pub); if (rl.indexOf(liveConn.ref) < 0) rl.unshift(liveConn.ref);
         return rl.map(function(n){ return '<option value="' + escAttr(n) + '"' + (n === liveConn.ref ? ' selected' : '') + '>🧑\u200d⚖️ ' + esc(n) + '</option>'; }).join('') + '<option value="__o">Someone else\u2026</option>'; })() + '</select>'
       : '<select style="margin-bottom:10px;" onchange="lvvSetMe(this.value)">' + opts + '</select>');
@@ -6858,7 +7018,7 @@ function lvMatchPicture(id){
     ctx.fillStyle = '#0a1628'; ctx.fillRect(0,0,W,H);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#c9a227'; ctx.font = '700 34px ' + FONT; ctx.fillText('STARPORT FENCING LIVE', W/2, 78);
-    ctx.fillStyle = '#7a8a9e'; ctx.font = '500 28px ' + FONT; ctx.fillText((m.meta.name || '') + (m.meta.date ? '  ·  ' + m.meta.date : ''), W/2, 124);
+    ctx.fillStyle = '#7a8a9e'; ctx.font = '500 28px ' + FONT; ctx.fillText((m.meta.name || '') + (m.meta.date ? '  ·  ' + auDate(m.meta.date) : ''), W/2, 124);
     ctx.font = '500 26px ' + FONT; ctx.fillText([x.round, x.piste ? 'Piste ' + x.piste : '', fmtNameById(x.fmt)].filter(Boolean).join('  ·  '), W/2, 166);
     var wA = st.r && st.r.final && st.r.scoreA > st.r.scoreB, wB = st.r && st.r.final && st.r.scoreB > st.r.scoreA;
     ctx.font = '700 46px ' + FONT;
@@ -6885,7 +7045,7 @@ function lvMatchPicture(id){
       });
     }
     ctx.textAlign = 'center'; ctx.fillStyle = '#3a4a5e'; ctx.font = '500 22px ' + FONT;
-    ctx.fillText('Starport Fencing · ' + new Date().toLocaleDateString(), W/2, H - 28);
+    ctx.fillText('Starport Fencing · ' + new Date().toLocaleDateString('en-AU'), W/2, H - 28);
     shareCanvasAsImage(c, 'starport-' + String((x.teamA||'a') + '-v-' + (x.teamB||'b')).replace(/[^A-Za-z0-9]+/g,'-') + '.png');
   } catch(e){ toast('Could not create the picture'); }
 }
@@ -6897,7 +7057,7 @@ function lvCheckinBanner(m){
   var fid = lvMyFid(m), mine = fid && m.checkins[fid], nAbs = m.fencers.length - present.length;
   present = m.fencers;   // counts are "X of everyone", with absent fencers listed separately
   if (st === 'open'){
-    if (mine) return '<div class="lv-ci ok">✅ <b>' + esc(LV.me) + '</b> checked in at ' + new Date(mine.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) + '<span>' + here + '/' + present.length + ' here</span></div>';
+    if (mine) return '<div class="lv-ci ok">✅ <b>' + esc(LV.me) + '</b> checked in at ' + new Date(mine.at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + '<span>' + here + '/' + present.length + ' here</span></div>';
     return '<div class="lv-ci"><div><b>📍 Check-in is open</b><br><span>' + here + ' of ' + present.length + ' fencers here' + (nAbs ? ' · ' + nAbs + ' absent' : '') + '</span></div><button class="btn btn-gold btn-sm" onclick="lvCheckinSheet()">Check in</button></div>';
   }
   return '<div class="lv-ci closed">Check-in closed · ' + here + ' of ' + present.length + ' fencers checked in' + (nAbs ? ' · ' + nAbs + ' absent' : '') + (mine ? ' · ✅ you' : '') + '</div>';
@@ -7012,7 +7172,9 @@ function lvRelayDetails(m, x, open, editFn){
   if (editFn && x.relay && !lvClosed(m, x)) h += '<button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="' + editFn + '(\'' + x.id + '\')">⇄ Change fencers</button>';
   return h + '</details>';
 }
-function lvOrderFor(m, x){ return x.fmt === 'team' ? lvRelayDetails(m, x, false, lvIsRef() ? 'lvRefOrderSheet' : null) : ''; }
+function lvOrderFor(m, x){ if (x.fmt !== 'team' || lvHideOrders()) return ''; return lvRelayDetails(m, x, false, lvIsRef() ? 'lvRefOrderSheet' : null); }
+function lvHideOrders(){ try { return !!(LV && document.getElementById('liveView').classList.contains('on') && Store.get('starport_lv_hideorders', false)); } catch(e){ return false; } }
+function lvToggleOrders(on){ Store.set('starport_lv_hideorders', !on); lvvRender(); }
 function lvTapAttr(id){ return ' onclick="lvMatchDetail(\'' + id + '\')"'; }
 function lvScheduleHtml(m, me){
   if (!m.matches.length) return '<div class="lv-empty">The host has not published any bouts yet.</div>';
@@ -7021,6 +7183,7 @@ function lvScheduleHtml(m, me){
   var done = m.matches.filter(function(x){ return lvClosed(m, x); }).length;
   var html = '<div class="lv-seg lv-mode">' + [['now','Now'],['piste','By piste'],['round','By round'],['all','Full schedule']].map(function(t){
       return '<button class="' + (mode===t[0]?'on':'') + '" onclick="lvSetMode(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>' +
+    (m.matches.some(function(x){ return x.fmt === 'team'; }) ? '<label class="lv-check" style="margin:2px 0 6px;"><input type="checkbox" ' + (lvHideOrders() ? '' : 'checked') + ' onchange="lvToggleOrders(this.checked)"> Show the 9-bout details</label>' : '') +
     '<div class="lv-progress"><span style="width:' + Math.round(100*done/m.matches.length) + '%"></span></div>' +
     '<div class="lv-sub">' + done + ' of ' + m.matches.length + ' bouts finished</div>';
   if (mode === 'now') return html + lvNowHtml(m, me);
@@ -7088,8 +7251,10 @@ function lvStandingsHtml(m){
     if (!list.length) return;
     html += '<div class="section-head">' + (team ? 'Teams' : 'Individual') + '</div>' +
       '<div class="lv-table"><div class="lt-row lt-head"><span>#</span><span>Name</span><span>V/M</span><span>TS</span><span>TR</span><span>Ind</span></div>';
+    var myTeam = ''; if (team && LV && LV.me) m.teams.forEach(function(t){ if (t.members.some(function(f){ return f.name === LV.me; })) myTeam = t.name; });
     list.forEach(function(x, i){
-      html += '<div class="lt-row' + (LV && x.name===LV.me ? ' mine' : '') + '"><span>' + (i+1) + '</span><span class="lt-name">' + esc(x.name) + '</span><span>' + x.v + '/' + x.m + '</span><span>' + x.ts + '</span><span>' + x.tr + '</span><span>' + (x.ind>0?'+':'') + x.ind + '</span></div>';
+      var mine = LV && LV.me && (x.name === LV.me || (team && x.name === myTeam));
+      html += '<div class="lt-row' + (mine ? ' mine' : '') + '"><span>' + (i+1) + '</span><span class="lt-name">' + (mine ? '⭐ ' : '') + esc(x.name) + '</span><span>' + x.v + '/' + x.m + '</span><span>' + x.ts + '</span><span>' + x.tr + '</span><span>' + (x.ind>0?'+':'') + x.ind + '</span></div>';
     });
     html += '</div>';
   });
@@ -7132,7 +7297,7 @@ function lvDownloadMine(){
     ctx.fillStyle = '#0a1628'; ctx.fillRect(0,0,W,H);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#c9a227'; ctx.font = '700 34px ' + FONT; ctx.fillText('STARPORT FENCING LIVE', W/2, 80);
-    ctx.fillStyle = '#7a8a9e'; ctx.font = '500 28px ' + FONT; ctx.fillText(m.meta.name + (m.meta.date ? '  ·  ' + m.meta.date : ''), W/2, 126);
+    ctx.fillStyle = '#7a8a9e'; ctx.font = '500 28px ' + FONT; ctx.fillText(m.meta.name + (m.meta.date ? '  ·  ' + auDate(m.meta.date) : ''), W/2, 126);
     ctx.fillStyle = '#f0eeea'; ctx.font = '700 58px ' + FONT; ctx.fillText(LV.me, W/2, 210);
     var fin = rows.filter(function(r){ return r.final; }), v = fin.filter(function(r){ return r.won; }).length, ts = 0, tr = 0;
     fin.forEach(function(r){ ts += r.my; tr += r.their; });
@@ -7151,7 +7316,7 @@ function lvDownloadMine(){
       y += 96;
     });
     ctx.textAlign = 'center'; ctx.fillStyle = '#3a4a5e'; ctx.font = '500 22px ' + FONT;
-    ctx.fillText('Starport Fencing · ' + new Date().toLocaleDateString(), W/2, H - 30);
+    ctx.fillText('Starport Fencing · ' + new Date().toLocaleDateString('en-AU'), W/2, H - 30);
     shareCanvasAsImage(c, 'starport-' + LV.me.replace(/[^A-Za-z0-9]+/g,'-') + '.png');
   } catch(e){ toast('Could not create the picture'); }
 }
