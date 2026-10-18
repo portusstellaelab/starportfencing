@@ -474,6 +474,21 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 #breakTimeSheet{z-index:300;}
 #exitSaveSheet{z-index:80;}
 #confirmSheet{z-index:320;}
+.lv-subtabs{margin:4px 0 10px;overflow-x:auto;flex-wrap:nowrap;}
+.lv-subtabs button{flex:0 0 auto;white-space:nowrap;padding-left:12px;padding-right:12px;}
+.tb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px 10px;padding:0 4px 6px;}
+.tb{display:flex;gap:10px;align-items:stretch;}
+.tb-col{flex:0 0 168px;display:flex;flex-direction:column;gap:6px;}
+.tb-ms{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:8px;}
+.tb-h{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:16px;color:var(--gold);text-align:center;}
+.tb-h small{display:block;font-family:'DM Sans',sans-serif;letter-spacing:0;font-size:11px;color:var(--muted);}
+.tb-m{border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.03);padding:5px 7px;cursor:pointer;}
+.tb-m.tb-wait{opacity:.6;cursor:default;} .tb-m.tb-empty{text-align:center;color:var(--muted);cursor:default;}
+.tb-l{display:flex;justify-content:space-between;gap:6px;font-size:13px;line-height:1.5;}
+.tb-l span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-l b{font-family:'DM Mono',monospace;font-weight:500;color:var(--muted);}
+.tb-l.win span,.tb-l.win b{font-weight:700;color:var(--white);} .tb-l.lose span{color:var(--muted);}
+.tb-p{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px;}
 .mv{margin-top:6px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .mv-r{display:grid;grid-template-columns:22px minmax(0,1fr) 40px 46px 40px minmax(0,1fr);gap:4px;align-items:center;padding:5px 5px;border-top:1px solid var(--border);}
 .mv-h{border-top:none;background:rgba(255,255,255,.04);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
@@ -5422,8 +5437,21 @@ function lhBoutsHtml(){
     ((LH.d.bracket || LH.d.tr || m.matches.some(function(x){ return /^Pool /.test(x.round||''); })) ? '<div style="text-align:right;margin:-2px 0 6px;"><button class="link" style="color:var(--muted);font-size:13px;" onclick="lhResetDraw()">\u21BA Reset generated draw</button></div>' : '') +
     (m.matches.some(function(x){ return x.fmt==='team'; }) ? '<label class="lv-check"><input type="checkbox" ' + (LH.showOrders!==false ? 'checked' : '') + ' onchange="LH.showOrders=this.checked;lhRender()"> Show the 9-bout order under each match</label>' : '');
   if (!m.matches.length) return html + '<div class="lv-empty">Nothing scheduled yet. Add the matches for round 1 (you can add round 2 any time, even after publishing), then tap <b>Generate schedule</b> to spread them across pistes.</div>';
+  var groups = lhRoundGroups(m), hasTab = !!(lhTR() || lhBracket());
+  var subs = (hasTab ? [{ key:'tableau', label:'Tableau' }] : []).concat(groups);
+  var cur = LH.schedSub;
+  if (!subs.some(function(g){ return g.key === cur; })){
+    cur = groups.length ? groups[groups.length-1].key : 'tableau';
+    for (var gi=0; gi<groups.length; gi++){ if (groups[gi].ids.some(function(id){ var x = lvFindMatch(m, id); return x && !lvClosed(m, x); })){ cur = groups[gi].key; break; } }
+  }
+  if (subs.length > 1) html += '<div class="lv-seg lv-subtabs">' + subs.map(function(g){ return '<button class="' + (g.key===cur?'on':'') + '" onclick="LH.schedSub=\'' + g.key + '\';lhRender()">' + esc(g.label) + '</button>'; }).join('') + '</div>';
+  if (cur === 'tableau') return html + lhTableauHtml(m, groups);
+  var grp = groups.filter(function(g){ return g.key === cur; })[0];
+  if (grp && grp.sub) html += '<div class="lv-sub" style="margin:2px 0 4px;"><b>' + esc(grp.label) + '</b> \u00b7 ' + esc(grp.sub) + '</div>';
+  var only = grp ? grp.ids : null;
   lvPistesUsed(m.matches).forEach(function(p){
-    var list = lvOnPiste(m, p);
+    var list = lvOnPiste(m, p).filter(function(x){ return !only || only.indexOf(x.id) >= 0; });
+    if (!list.length) return;
     html += '<div class="section-head">' + (p ? 'Piste ' + p : 'No piste yet') + '</div>';
     list.forEach(function(x, i){
       html += '<div class="lh-bout">' + lvMatchRow(m, x, null, ' onclick="lhBoutSheet(\'' + x.id + '\')"') + '</div>';
@@ -5431,6 +5459,52 @@ function lhBoutsHtml(){
     });
   });
   return html;
+}
+/* Rounds in the order they were built: team rounds, the DE tableau, pools, then anything added by hand */
+function lhRoundGroups(m){
+  var out = [], used = {}, tr = lhTR(), b = lhBracket();
+  function add(name, entries){
+    var ids = entries.map(function(e){ return e.mid; }).filter(function(id){ return id && lvFindMatch(m, id); });
+    ids.forEach(function(id){ used[id] = 1; });
+    var n = out.length + 1;
+    out.push({ key:'r' + n, label:'Round ' + n, sub:(name && name !== 'Round ' + n ? name : ''), ids:ids, entries:entries });
+  }
+  var pools = m.matches.filter(function(x){ return /^Pool /.test(x.round||''); });
+  if (pools.length){ pools.forEach(function(x){ used[x.id] = 1; }); out.push({ key:'r1', label:'Round 1', sub:'Pools', ids:pools.map(function(x){ return x.id; }), entries:null }); }
+  if (tr) tr.rounds.forEach(function(r){ add(r.name, r.pairs || []); });
+  else if (b) b.rounds.forEach(function(r){ add(lhTableName(r.size), r.entries || []); });
+  var rest = {}, order = [];
+  m.matches.forEach(function(x){ if (used[x.id]) return; var k = x.round || 'Other bouts'; if (!rest[k]){ rest[k] = []; order.push(k); } rest[k].push(x.id); });
+  order.sort(function(a,c){ return a.localeCompare(c, undefined, {numeric:true}); });
+  order.forEach(function(k){
+    var mm = /^Round (\d+)$/.exec(k);
+    var same = out.filter(function(g){ return g.label === k; })[0];
+    if (same){ same.ids = same.ids.concat(rest[k]); return; }
+    out.push({ key:'x' + out.length, label:k, sub:'', ids:rest[k], entries:null });
+  });
+  return out;
+}
+function lhTableauHtml(m, groups){
+  var rounds = groups.filter(function(g){ return g.entries; });
+  if (!rounds.length) return '<div class="lv-empty">The tableau appears once Round 1 is built.</div>';
+  function nm(id){ if (!id) return ''; var t = LH.d.teams[id]; if (t) return t.name; var f = LH.d.fencers[id]; return f ? f.name : ''; }
+  var cols = rounds.map(function(g){
+    return '<div class="tb-col"><div class="tb-h">' + esc(g.label) + (g.sub ? '<small>' + esc(g.sub) + '</small>' : '<small>&nbsp;</small>') + '</div><div class="tb-ms">' +
+      g.entries.map(function(e){
+        if (!e || (!e.a && !e.b)) return '<div class="tb-m tb-empty">\u2014</div>';
+        var x = e.mid ? lvFindMatch(m, e.mid) : null, r = e.mid ? m.results[e.mid] : null, hs = r && r.hasScore;
+        var wa = r && r.final && r.scoreA > r.scoreB, wb = r && r.final && r.scoreB > r.scoreA;
+        var na = x ? x.teamA : nm(e.a), nb = x ? x.teamB : (e.b ? nm(e.b) : '');
+        if (!e.b && !x) return '<div class="tb-m"><div class="tb-l win"><span>' + esc(na) + '</span><b>BYE</b></div></div>';
+        return '<div class="tb-m' + (x ? '' : ' tb-wait') + '"' + (x ? ' onclick="lhBoutSheet(\'' + x.id + '\')"' : '') + '>' +
+          '<div class="tb-l' + (wa ? ' win' : (wb ? ' lose' : '')) + '"><span>' + esc(na || 'TBC') + '</span><b>' + (hs ? r.scoreA : '') + '</b></div>' +
+          '<div class="tb-l' + (wb ? ' win' : (wa ? ' lose' : '')) + '"><span>' + esc(nb || 'TBC') + '</span><b>' + (hs ? r.scoreB : '') + '</b></div>' +
+          (x && x.piste ? '<div class="tb-p">Piste ' + x.piste + (r && !r.final && hs ? ' \u00b7 live' : '') + '</div>' : '') + '</div>';
+      }).join('') + '</div></div>';
+  }).join('');
+  var pod = ''; try { pod = lvPodiumHtml(m, lhBuildPublic()); } catch(e){}
+  return '<div class="tb-wrap"><div class="tb">' + cols + '</div></div>' + (pod ? '<div class="section-head">Podium</div>' + pod : '') +
+    '<div class="lv-sub">Tap a match to open it. Winners are in bold.</div>';
 }
 function lhPisteBouts(p){ return Object.keys(LH.d.matches).filter(function(k){ return (LH.d.matches[k].piste||0) === p; }).sort(function(a,b){ return (LH.d.matches[a].order||0) - (LH.d.matches[b].order||0); }); }
 function lhRenumber(p){ lhPisteBouts(p).forEach(function(k, i){ LH.d.matches[k].order = i+1; }); }
@@ -5884,12 +5958,12 @@ function lhAutoRoundLabel(){
     var sg = null; try { sg = lhTrSuggest(); } catch(e){}
     if (!sg || sg.error) return 'Build Round 1';
     if (sg.done) return 'All rounds done — set the podium';
-    return 'Build Round ' + sg.n + (sg.name && sg.name !== 'Round ' + sg.n ? ' \u00b7 ' + sg.name : '');
+    return 'Build Round ' + sg.n;
   }
   var p = null; try { p = lhNextRoundPlan(); } catch(e){}
-  if (!p || p.error) return 'Auto-generate Round 1';
+  if (!p || p.error) return 'Build Round 1';
   if (p.done) return 'Tableau complete \u2014 Final created';
-  return 'Auto-generate Round ' + p.round + ' \u00b7 ' + lhTableName(p.size);
+  return 'Build Round ' + p.round;
 }
 function lhAutoRoundSheet(){
   if (LH.d.meta.type === 'teams'){ lhTrSheet(); return; }
