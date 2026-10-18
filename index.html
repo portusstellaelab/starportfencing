@@ -474,6 +474,12 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 #breakTimeSheet{z-index:300;}
 #exitSaveSheet{z-index:80;}
 #confirmSheet{z-index:320;}
+.lv-relay-ab .lr-h span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lv-relay-ab .lr-h .lr-ta{color:var(--gold);font-weight:700;}
+.lv-relay-ab .lr-h .lr-tb{color:var(--blue2);font-weight:700;text-align:right;}
+.lv-relay-ab .lr-h span:nth-child(3){text-align:center;}
+.lv-relay-ab .lr-r span:nth-child(2){border-left:3px solid rgba(201,162,39,.7);padding-left:6px;}
+.lv-relay-ab .lr-r span:nth-child(4){border-right:3px solid rgba(46,125,212,.8);padding-right:6px;}
 .mh-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px -4px 0;padding:0 4px 4px;}
 table.mh{border-collapse:separate;border-spacing:4px 3px;}
 table.mh th{position:sticky;left:0;z-index:2;background:var(--navy2);text-align:left;font-size:11px;color:var(--muted);font-weight:600;min-width:72px;max-width:84px;padding:0 6px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -4473,7 +4479,7 @@ function lvBaseUrl(){
   try { if (/^https?:$/.test(location.protocol)) return location.origin + location.pathname; } catch(e){}
   return LIVE_PUBLIC_URL || '';
 }
-function lvCheckinLink(code){ var b = lvBaseUrl(); return b ? b + '#checkin=' + code : ''; }
+function lvCheckinLink(code){ return lvViewLink(code); }   // one QR for everyone: follow the event, and check in while check-in is open
 var LV_KEEP_DAYS = 7;
 function lvExpiry(date, createdAt){
   var base = 0;
@@ -4488,6 +4494,14 @@ function lvRemoveExpired(code){
   liveFetch('PATCH', '/', body).then(function(){});
 }
 function lvViewLink(code){ var b = lvBaseUrl(); return b ? b + '#view=' + code : ''; }
+function lvHostLink(code, pin, rp){ var b = lvBaseUrl(); return (b && pin) ? b + '#host=' + code + '&p=' + pin + (rp ? '&r=' + rp : '') : ''; }
+/* the three QR codes: fencers & viewers, referees, host (committee) */
+var LH_QR = {
+  view: { tab:'Fencers & viewers', icon:'👀', title:'Fencers & viewers: scan to follow', desc:'Live bouts, scores and results. While check-in is open, fencers are asked to check in first. No login.' },
+  ref:  { tab:'Referees', icon:'🧑\u200d⚖️', title:'Referees: scan to referee', desc:'Opens the referee screen with the PIN already in. They just pick their name. Only show this to referees.' },
+  host: { tab:'Host', icon:'🏅', title:'Committee: scan to run the event', desc:'Opens this event as host on their phone (full control). Only show this to committee members.' }
+};
+function lhQrLink(kind){ return kind === 'ref' ? lvRefereeLink(LH.code, LH.refPin) : (kind === 'host' ? lvHostLink(LH.code, LH.hostPin, LH.refPin) : lvViewLink(LH.code)); }
 function lvRefereeLink(code, pin){ var b = lvBaseUrl(); return (b && pin) ? b + '#ref=' + code + '&p=' + pin : ''; }
 function lvRefLink(code, mid){ var b = lvBaseUrl(); return b ? b + '#live=' + code + '&match=' + mid : ''; }
 function lvRecent(){ var r = Store.get('starport_lv_recent', []); return Array.isArray(r) ? r : []; }
@@ -4817,7 +4831,7 @@ function lhShowPins(isNew){
   lvSheet('<div class="sheet-title">' + (isNew ? '✅ Event created — save these' : 'Event codes') + '</div>' +
     '<div class="lv-pins">' +
       '<div><span>Event code</span><b>' + esc(LH.code) + '</b><em>Give to everyone. Viewing only.</em></div>' +
-      '<div><span>Referee PIN</span><b>' + (LH.refPin ? esc(LH.refPin) : '—') + '</b><em>' + (LH.refPin ? 'Give to referees. Lets them upload scores.' : 'Only shown on the device that created the event. Your host PIN also works for referees.') + '</em></div>' +
+      '<div><span>Referee PIN</span><b>' + (LH.refPin ? esc(LH.refPin) : '—') + '</b><em>' + (LH.refPin ? 'Give to referees. Lets them upload scores.' : lhRefPinWait()) + '</em></div>' +
       '<div><span>Host PIN</span><b>' + esc(LH.hostPin) + '</b><em>Keep private. Needed to manage this event on another device. It cannot be recovered.</em></div>' +
     '</div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'Event: ' + escAttr(LH.d.meta.name) + '\\nEvent code: ' + LH.code + (LH.refPin ? '\\nReferee PIN: ' + LH.refPin : '') + '\\nHost PIN: ' + LH.hostPin + '\')">Copy all</button>' +
@@ -4866,7 +4880,8 @@ function lhLogin(){
     });
   });
 }
-function lhAfterLogin(){ lhSaveLocal(); lvRemember(LH.code, LH.d.meta.name, 'host'); lhOpen(); toast('Opened ' + LH.d.meta.name); }
+var lhPendingRefPin = null;
+function lhAfterLogin(){ if (lhPendingRefPin && LH && !LH.refPin) LH.refPin = lhPendingRefPin; lhPendingRefPin = null; lhSaveLocal(); lvRemember(LH.code, LH.d.meta.name, 'host'); lhOpen(); toast('Opened ' + LH.d.meta.name); }
 function lhResume(code){
   var local = Store.get('starport_host_' + code, null);
   if (!local || !local.hostPin){ lhOpenSheet(); setTimeout(function(){ var c = document.getElementById('loCode'); if (c) c.value = code; }, 0); return; }
@@ -4886,8 +4901,26 @@ function lhRefreshFromServer(quiet){
     } else if (!quiet) toast('Could not refresh: ' + liveReason(r));
   });
 }
+function lhRefPinWait(){ return LH && LH.refPinFail ? 'Could not get a referee PIN for this device (check the internet, or update the Firebase rules). Your host PIN also works for referees.' : 'Getting a referee PIN for this device\u2026'; }
+function lhEnsureRefPin(){
+  if (!LH || LH.refPin || LH.refPinBusy) return;
+  var code = LH.code, hp = LH.hostPin, rp = lvPin();
+  if (rp === hp) rp = lvPin();
+  LH.refPinBusy = true;
+  var N = lvNonce(), body = {};
+  body['secrets/' + code + '/extra/' + rp] = { n:N };
+  body['events/' + code + '/hostAuth/' + N] = { pin:hp, at:{'.sv':'timestamp'} };
+  liveFetch('PATCH', '/', body).then(function(r){
+    if (!LH || LH.code !== code) return;
+    LH.refPinBusy = false;
+    if (r.ok){ LH.refPin = rp; LH.refPinFail = false; lhSaveLocal(); }
+    else LH.refPinFail = true;
+    lhRender();
+  });
+}
 function lhOpen(){
   show('liveHost');
+  setTimeout(lhEnsureRefPin, 300);
   if (LH.stream) LH.stream.close();
   LH.stream = lvStream('/events/' + LH.code + '/public', function(tree){
     if (!LH) return; LH.results = (tree && tree.results) || {}; LH.checkins = (tree && tree.checkins) || {}; LH.pubF = (tree && tree.fencers) || {}; LH.orders = (tree && tree.orders) || null; LH.claims = (tree && tree.claims) || null; LH.pub = {}; if (tree && tree.matches) Object.keys(tree.matches).forEach(function(k){ LH.pub[k] = 1; }); lhScheduleRender();
@@ -4962,19 +4995,21 @@ function lhRender(){
   document.getElementById('lhTitle').textContent = LH.d.meta.name;
   document.getElementById('lhCode').textContent = LH.code;
   lhRenderBar();
-  var tabs = [['fencers','Fencers'],['teams','Teams'],['bouts','Schedule'],['results','Results'],['share','Share']];
+  var tabs = [['refs','Referees'],['fencers','Fencers'],['teams','Teams'],['bouts','Schedule'],['results','Results'],['share','Share']];
   if (LH.d.meta.type === 'individual') tabs = tabs.filter(function(t){ return t[0] !== 'teams'; });
   if (LH.d.meta.type === 'individual' && LH.tab === 'teams') LH.tab = 'fencers';
   document.getElementById('lhTabs').innerHTML = tabs.map(function(t){ return '<button class="lv-tab' + (LH.tab===t[0]?' on':'') + '" onclick="lhSetTab(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('');
   var body = document.getElementById('lhBody');
   try {
-    if (LH.tab==='fencers') body.innerHTML = lhFencersHtml();
+    if (LH.tab==='refs') body.innerHTML = lhRefsTabHtml();
+    else if (LH.tab==='fencers') body.innerHTML = lhFencersHtml();
     else if (LH.tab==='teams') body.innerHTML = lhTeamsHtml();
     else if (LH.tab==='bouts') body.innerHTML = lhBoutsHtml();
     else if (LH.tab==='results') body.innerHTML = lhResultsHtml();
     else body.innerHTML = lhShareHtml();
   } catch(e){ body.innerHTML = '<div class="live-banner">Something in this event could not be shown. Your data is safe.</div>'; }
   if (LH.tab==='share') lhDrawQr();
+  if (LH.tab==='refs' && LH.refPin) lvQrInto('lhRefQr', lvRefereeLink(LH.code, LH.refPin), 180);
 }
 
 /* ---------- fencers ---------- */
@@ -6143,7 +6178,7 @@ function lhCheckinCard(){
     (st ? '<span class="lr-chip">' + here + '/' + present.length + ' here</span>' : '') + '</div>';
   if (!st) h += '<div class="lv-sub" style="margin-top:0;">Publish your fencer list and teams first (everyone assumed to come). Open check-in when doors open: fencers scan the check-in QR, tap their name, and then see the event as themselves.</div>' +
     '<button class="btn btn-gold btn-block" onclick="lhSetCheckin(\'open\')">Open check-in</button>';
-  else if (st === 'open') h += '<div class="live-actions" style="margin:0;"><button class="btn btn-gold" onclick="lhCheckinPoster()">Show check-in QR</button><button class="btn btn-ghost" onclick="lhSetCheckin(\'closed\')">Close check-in</button></div>' +
+  else if (st === 'open') h += '<div class="live-actions" style="margin:0;"><button class="btn btn-gold" onclick="lhCheckinPoster()">Show fencer QR</button><button class="btn btn-ghost" onclick="lhSetCheckin(\'closed\')">Close check-in</button></div>' +
     '<div class="lv-sub">Follow arrivals live in the Fencers tab. Tap a name there to check someone in by hand.</div>';
   else h += '<div class="live-actions" style="margin:0;"><button class="btn btn-gold" onclick="LH.tab=\'fencers\';LH.ciFilter=\'missing\';lhRender()">See no-shows</button><button class="btn btn-ghost" onclick="lhSetCheckin(\'open\')">Reopen</button></div>';
   return h + '</div>';
@@ -6158,10 +6193,10 @@ function lhSetCheckin(st){
 }
 function lhCheckinPoster(){
   var link = lvCheckinLink(LH.code);
-  lvSheet('<div class="lv-poster"><div class="lv-poster-t">CHECK IN HERE</div><div class="lv-poster-n">' + esc(LH.d.meta.name) + '</div>' +
+  lvSheet('<div class="lv-poster"><div class="lv-poster-t">SCAN TO CHECK IN</div><div class="lv-poster-n">' + esc(LH.d.meta.name) + '</div>' +
     (LH.d.meta.venue ? '<div class="lv-sub" style="margin:0;">' + esc(LH.d.meta.venue) + '</div>' : '') +
     '<div id="ciQr" class="lv-qr" style="padding:14px;"></div>' +
-    '<div class="lv-sub">Scan with your phone camera, then tap your name.</div>' +
+    '<div class="lv-sub">Fencers: scan, then tap your name. Everyone else: scan to follow the event live.</div>' +
     (link ? '<div class="lv-link">' + esc(link) + '</div>' : '<div class="lv-bigcode">' + esc(LH.code) + '</div>') +
     '</div><div class="sheet-row">' + (link ? '<button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + escAttr(link) + '\')">Copy link</button>' : '') + '<button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>');
   lvQrInto('ciQr', link, 240);
@@ -6178,29 +6213,46 @@ function lvQrInto(elId, link, size){
   document.head.appendChild(s);
 }
 /* ---------- QR codes and share links: viewers and referees ---------- */
+function lhQrCard(){
+  var kind = LH.qrKind || 'view', q = LH_QR[kind], link = lhQrLink(kind);
+  if (!link && kind !== 'view'){ kind = LH.qrKind = 'view'; q = LH_QR.view; link = lhQrLink('view'); }
+  var kinds = ['view','ref','host'].filter(function(k){ return k === 'view' || lhQrLink(k); });
+  return '<div class="lv-card" style="text-align:center;">' +
+    '<div class="lv-seg" id="lhQrSeg" style="margin-bottom:10px;">' + kinds.map(function(k){ return '<button class="' + (k===kind?'on':'') + '" onclick="LH.qrKind=\'' + k + '\';lhRender()">' + LH_QR[k].icon + ' ' + LH_QR[k].tab + '</button>'; }).join('') + '</div>' +
+    '<div class="lv-team-name" style="margin-bottom:2px;">' + q.title + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">' + q.desc + '</div>' +
+    '<div id="lhQr" class="lv-qr"></div>' +
+    '<div class="lv-bigcode">' + esc(LH.code) + '</div>' +
+    (kind === 'ref' ? '<div class="lv-sub" style="margin-top:0;">Referee PIN ' + esc(LH.refPin) + '</div>' : '') +
+    (link ? '<div class="live-actions"><button class="btn btn-gold" onclick="lhShareLink(\'' + kind + '\')">Share link</button><button class="btn btn-ghost" onclick="lvCopy(lhQrLink(\'' + kind + '\'))">Copy link</button><button class="btn btn-ghost" onclick="lhQrSheet(\'' + kind + '\')">⛶ Full screen</button></div>'
+          : '<div class="lv-sub">Share the event code. Viewers open Fencing Live and enter it.</div>') +
+    (kinds.length < 3 ? '<div class="lv-sub">Referee code: ' + lhRefPinWait() + '</div>' : '') +
+  '</div>';
+}
 function lhShareCard(){
   var vl = lvViewLink(LH.code), rl = lvRefereeLink(LH.code, LH.refPin);
-  return '<div class="lv-card"><b>📲 Scan to open</b><div class="lv-sub" style="margin-top:2px;">No typing on the day: viewers and referees scan their own code.</div>' +
-    '<div class="live-actions" style="margin:6px 0 0;"><button class="btn btn-gold" onclick="lhQrSheet(\'view\')">👀 Viewer QR</button>' +
+  return '<div class="lv-card"><b>📲 Scan to open</b><div class="lv-sub" style="margin-top:2px;">Two codes, no typing on the day. <b>Event QR</b> for everyone: follow live, and fencers check in with it while check-in is open. <b>Referee QR</b>: opens the referee screen, no PIN needed.</div>' +
+    '<div class="live-actions" style="margin:6px 0 0;"><button class="btn btn-gold" onclick="lhQrSheet(\'view\')">👀 Event QR</button>' +
       (rl ? '<button class="btn btn-gold" onclick="lhQrSheet(\'ref\')">🧑\u200d⚖️ Referee QR</button>' : '') + '</div>' +
     '<div class="live-actions" style="margin:6px 0 0;"><button class="btn btn-ghost" onclick="lhShareLink(\'view\')">Share viewer link</button>' +
       (rl ? '<button class="btn btn-ghost" onclick="lhShareLink(\'ref\')">Share referee link</button>' : '') + '</div>' +
-    (rl ? '' : '<div class="lv-sub">The referee QR and link are only on the device that created the event (they contain the referee PIN).</div>') + '</div>';
+    (rl ? '' : '<div class="lv-sub">Referee QR not available on this device yet \u2014 open the event once on the device that created it.</div>') + '</div>';
 }
 function lhQrSheet(kind){
-  var ref = kind === 'ref', link = ref ? lvRefereeLink(LH.code, LH.refPin) : lvViewLink(LH.code);
+  var ref = kind === 'ref', link = lhQrLink(kind), q = LH_QR[kind] || LH_QR.view;
   if (!link){ toast('No link available'); return; }
-  lvSheet('<div class="sheet-title">' + (ref ? '🧑\u200d⚖️ Referees: scan to referee' : '👀 Scan to follow the event') + '</div>' +
-    '<div class="lv-sub" style="margin-top:0;">' + esc(LH.d.meta.name) + (ref ? ' — opens the referee screen with the PIN filled in. They just pick their name. <b>Only show this to referees.</b>' : ' — live bouts, results and standings. No login.') + '</div>' +
+  lvSheet('<div class="sheet-title">' + q.icon + ' ' + q.title + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">' + esc(LH.d.meta.name) + ' — ' + q.desc + '</div>' +
     '<div id="lhBigQr" class="lv-qr" style="margin:10px auto;"></div>' +
-    '<div class="lv-bigcode">' + esc(LH.code) + '</div>' + (ref ? '<div class="lv-sub" style="text-align:center;">Referee PIN ' + esc(LH.refPin) + '</div>' : '') +
+    '<div class="lv-bigcode">' + esc(LH.code) + '</div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button><button class="btn btn-gold btn-block" onclick="lhShareLink(\'' + kind + '\')">Share link</button></div>');
   lvQrInto('lhBigQr', link, Math.min(280, (window.innerWidth||360) - 80));
 }
 function lhShareLink(kind){
-  var ref = kind === 'ref', link = ref ? lvRefereeLink(LH.code, LH.refPin) : lvViewLink(LH.code);
+  var link = lhQrLink(kind);
   if (!link) return;
-  var text = ref ? 'Referee ' + LH.d.meta.name + ' on Starport Fencing Live (referees only — includes the PIN):' : 'Follow ' + LH.d.meta.name + ' live on Starport Fencing:';
+  var text = kind === 'ref' ? 'Referee ' + LH.d.meta.name + ' on Starport Fencing Live (referees only — includes the PIN):' :
+    (kind === 'host' ? 'Run ' + LH.d.meta.name + ' as host on Starport Fencing Live (committee only — full control):' : 'Follow ' + LH.d.meta.name + ' live on Starport Fencing (fencers: check in here):');
   if (navigator.share){ navigator.share({ title:LH.d.meta.name, text:text, url:link }).catch(function(){}); }
   else lvCopy(text + ' ' + link);
 }
@@ -6208,11 +6260,12 @@ function lhPrintCard(){
   var team = lhModel().teams.length > 0;
   return '<div class="lv-card"><b>🖨 Print or save (PDF / picture)</b><div class="lv-sub" style="margin-top:2px;">Each opens a page you can print, save as PDF or save as a picture.</div>' +
     '<div class="lv-pbtns">' +
-      '<button class="btn btn-ghost" onclick="lhPrint(\'info\')">📄 Event info &amp; QR</button>' +
+      '<button class="btn btn-ghost" onclick="lhPrint(\'info\')">📄 Event info &amp; fencer QR</button>' +
       '<button class="btn btn-ghost" onclick="lhPrint(\'checkin\')">✅ Check-in list</button>' +
       (team ? '<button class="btn btn-ghost" onclick="lhPrint(\'teams\')">👥 Teams</button>' : '') +
       '<button class="btn btn-ghost" onclick="lhPrint(\'schedule\')">📋 Bout schedule</button>' +
       (LH.refPin ? '<button class="btn btn-ghost" onclick="lhPrint(\'ref\')">🧑\u200d⚖️ Referee card</button>' : '') +
+      '<button class="btn btn-ghost" onclick="lhPrint(\'host\')">🏅 Host card</button>' +
     '</div></div>';
 }
 /* ---------- printable pages ---------- */
@@ -6225,15 +6278,16 @@ function lhPrint(kind){
     pvEsc([meta.date, meta.time, meta.venue, wName].filter(Boolean).join(' \u00b7 ')) + ' \u00b7 Event code <b>' + pvEsc(LH.code) + '</b></div></div>';
   var foot = '<div class="pv-foot">Starport Fencing Live \u00b7 printed ' + new Date().toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</div>';
   var title = '';
-  if (kind === 'info' || kind === 'ref'){
+  if (kind === 'info' || kind === 'ref' || kind === 'host'){
     var ref = kind === 'ref';
-    title = ref ? 'Referee card' : 'Event info';
+    title = ref ? 'Referee card' : (kind === 'host' ? 'Host card' : 'Event info');
     html = head + '<div class="pv-qrs">' +
-      (ref ? '<div class="pv-qrbox"><div id="pvQr1" class="pv-qr"></div><b>Referees: scan to referee</b><span>Referee PIN <b>' + pvEsc(LH.refPin) + '</b></span><span>Opens the referee screen. Pick your name, then tap a bout.</span></div>'
-           : '<div class="pv-qrbox"><div id="pvQr1" class="pv-qr"></div><b>Scan to follow live</b><span>Bouts, live scores, results</span></div>' +
-             (meta.checkin === 'open' ? '<div class="pv-qrbox"><div id="pvQr2" class="pv-qr"></div><b>Fencers: scan to check in</b><span>Tap your name when you arrive</span></div>' : '')) +
+      (ref ? '<div class="pv-qrbox"><div id="pvQr1" class="pv-qr"></div><b>Referees: scan to referee</b><span>No PIN needed. Pick your name, then tap the bout you are refereeing.</span></div>'
+           : kind === 'host' ? '<div class="pv-qrbox"><div id="pvQr1" class="pv-qr"></div><b>Committee: scan to run the event</b><span>Opens the event as host on your phone (full control)</span></div>'
+           : '<div class="pv-qrbox"><div id="pvQr1" class="pv-qr"></div><b>Scan to follow live & check in</b><span>Fencers: tap your name when you arrive.<br>Everyone: live bouts, scores and results.</span></div>') +
       '</div>' +
-      (ref ? '<div class="pv-note">Keep this card with the referees — it contains the referee PIN.</div>' :
+      (ref ? '<div class="pv-note">Keep this card at the referee table \u2014 anyone who scans it can enter scores.</div>' :
+       kind === 'host' ? '<div class="pv-note">Committee only \u2014 anyone who scans this card can run and change the event. Host PIN <b>' + pvEsc(LH.hostPin) + '</b>.</div>' :
         '<table class="pv-t"><tr><th>Fencers</th><td>' + m.fencers.filter(function(f){ return !f.absent; }).length + '</td></tr>' +
         (m.teams.length ? '<tr><th>Teams</th><td>' + m.teams.length + '</td></tr>' : '') +
         '<tr><th>Bouts</th><td>' + m.matches.length + '</td></tr>' +
@@ -6284,8 +6338,9 @@ function pvOpen(title, html, kind){
     '<div class="pv-page" id="pvPage">' + html + '</div>';
   pv.classList.add('on'); document.body.classList.add('pv-open');
   try { pv.scrollTop = 0; } catch(e){}
-  if (kind === 'info') { lvQrInto('pvQr1', lvViewLink(LH.code), 200); if (document.getElementById('pvQr2')) lvQrInto('pvQr2', lvCheckinLink(LH.code), 200); }
+  if (kind === 'info') lvQrInto('pvQr1', lvViewLink(LH.code), 220);
   if (kind === 'ref') lvQrInto('pvQr1', lvRefereeLink(LH.code, LH.refPin), 200);
+  if (kind === 'host') lvQrInto('pvQr1', lvHostLink(LH.code, LH.hostPin, LH.refPin), 200);
 }
 function pvClose(){ var pv = document.getElementById('printView'); pv.classList.remove('on'); pv.innerHTML = ''; document.body.classList.remove('pv-open'); }
 function pvPrint(){
@@ -6305,9 +6360,19 @@ function pvPng(title){
   sc.onload = go; sc.onerror = function(){ toast('Could not load the picture tool \u2014 check the internet'); };
   document.head.appendChild(sc);
 }
+function lhRefsTabHtml(){
+  var list = Array.isArray(LH.d.referees) ? LH.d.referees : [], claims = LH.claims || {}, busy = {};
+  Object.keys(claims).forEach(function(k){ var c = liveCleanClaim(claims[k]); if (c && c.status === 'active') busy[c.ref] = (busy[c.ref]||0) + 1; });
+  return lhRefsCard() +
+    '<div class="lv-card" style="text-align:center;"><b>🧑\u200d⚖️ Referee QR</b><div class="lv-sub" style="margin-top:2px;">Referees scan this, pick their name and start. No PIN to type.</div>' +
+      (LH.refPin ? '<div id="lhRefQr" class="lv-qr"></div><div class="lv-sub" style="margin-top:0;">Event code <b>' + esc(LH.code) + '</b> \u00b7 Referee PIN <b>' + esc(LH.refPin) + '</b></div>' +
+        '<div class="live-actions"><button class="btn btn-gold" onclick="lhShareLink(\'ref\')">Share referee link</button><button class="btn btn-ghost" onclick="lhQrSheet(\'ref\')">⛶ Full screen</button></div>'
+        : '<div class="lv-sub">' + lhRefPinWait() + '</div>') + '</div>' +
+    (Object.keys(busy).length ? '<div class="lv-card"><b>Refereeing now</b><div class="lv-sub" style="margin-top:4px;">' + Object.keys(busy).sort().map(function(n){ return esc(n) + ' (' + busy[n] + ' bout' + (busy[n] > 1 ? 's' : '') + ')'; }).join(' \u00b7 ') + '</div></div>' : '');
+}
 function lhRefsCard(){
   var list = Array.isArray(LH.d.referees) ? LH.d.referees : [];
-  return '<div class="lv-card"><b>🧑\u200d⚖️ Referees</b><div class="lv-sub" style="margin-top:2px;">Referees pick their name from this list when they open the event (or type a new one). Publish after changes.</div>' +
+  return '<div class="lv-card"><b>🧑\u200d⚖️ Referees</b><div class="lv-sub" style="margin-top:2px;">Add your referees here. They pick their name from this list when they open the event (or type a new one). Publish after changes.</div>' +
     '<div class="lv-chips" style="margin:6px 0;">' + (list.map(function(n, i){ return '<span class="lv-chip">' + esc(n) + ' <button class="link" style="color:var(--muted);padding:0 2px;" onclick="lhRefDel(' + i + ')">\u00d7</button></span>'; }).join('') || '<span class="lv-sub">No referees yet.</span>') + '</div>' +
     '<div style="display:flex;gap:8px;"><input id="lhRefIn" maxlength="40" placeholder="Name, or several separated by commas"><button class="btn btn-gold" onclick="lhRefAdd()">Add</button></div></div>';
 }
@@ -6323,14 +6388,8 @@ function lhShareHtml(){
   var link = lvViewLink(LH.code);
   var exp = LH.d.meta.expiresAt || lvExpiry(LH.d.meta.date, LH.d.meta.createdAt);
   return '<div class="lv-expiry" style="margin:0 0 10px;">\u23F3 This event is deleted automatically on <b>' + esc(lvExpiryText(exp)) + '</b> (7 days after the event date). Change the date in \u2699 settings.</div>' +
-    lhCheckinCard() + '<div class="lv-card" style="text-align:center;">' +
-      '<div class="lv-sub" style="margin-top:0;">Viewers open this link or scan the code. No login needed.</div>' +
-      '<div id="lhQr" class="lv-qr"></div>' +
-      '<div class="lv-bigcode">' + esc(LH.code) + '</div>' +
-      (link ? '<div class="lv-link">' + esc(link) + '</div><div class="live-actions"><button class="btn btn-gold" onclick="lvCopy(\'' + escAttr(link) + '\')">Copy viewer link</button></div>'
-            : '<div class="lv-sub">Share the event code. Viewers open Fencing Live and enter it.</div>') +
-    '</div>' +
-    lhRefsCard() + lhShareCard() + lhPrintCard() +
+    lhCheckinCard() + lhQrCard() +
+    lhPrintCard() +
     '<div class="lv-card"><div class="live-actions" style="margin:0;"><button class="btn btn-ghost" onclick="lhShowPins(false)">Show PINs</button><button class="btn btn-ghost" onclick="lvOpenView(\'' + LH.code + '\')">Preview viewer page</button></div></div>' +
     '<div class="lv-card"><div class="lv-sub" style="margin-top:0;">On this device only:</div>' +
       '<div class="live-actions" style="margin:0;"><button class="btn btn-ghost" onclick="lhRefreshFromServer()">↻ Reload published</button><button class="btn btn-ghost" onclick="lhLeave()">Close event here</button></div></div>' +
@@ -6339,7 +6398,7 @@ function lhShareHtml(){
 }
 var lvQrLoading = false;
 function lhDrawQr(){
-  var el = document.getElementById('lhQr'), link = LH ? lvViewLink(LH.code) : '';
+  var el = document.getElementById('lhQr'), link = LH ? lhQrLink(LH.qrKind || 'view') : '';
   if (!el || !link) { if (el) el.style.display = 'none'; return; }
   function draw(){ try { el.innerHTML = ''; new QRCode(el, { text:link, width:180, height:180, colorDark:'#0a1628', colorLight:'#ffffff' }); } catch(e){ el.style.display = 'none'; } }
   if (window.QRCode){ draw(); return; }
@@ -6360,8 +6419,7 @@ function lhSettingsSheet(){
   WEAPONS.forEach(function(w){ wOpts += '<option value="' + w.id + '">' + w.name + '</option>'; });
   var tLabel = LH.d.meta.type === 'teams' ? 'Teams \u00b7 DE' : (LH.d.meta.type === 'individual' ? 'Individual \u00b7 ' + ({pool:'Pool', vet:'Veteran DE', senior:'Senior DE'}[LH.d.meta.fmt] || '') : 'Mixed');
   lvSheet('<div class="sheet-title">\u2699 Event settings</div><div class="lv-sub" style="margin-top:0;">Event type: <b>' + tLabel + '</b></div>' +
-    '<div class="live-actions" style="margin:0 0 10px;"><button class="btn btn-ghost" onclick="lvCloseSheet();lhQrSheet(\'view\')">👀 Viewer QR</button>' + (LH.refPin ? '<button class="btn btn-ghost" onclick="lvCloseSheet();lhQrSheet(\'ref\')">🧑\u200d⚖️ Referee QR</button>' : '') +
-    '<button class="btn btn-ghost" onclick="lvCloseSheet();LH.tab=\'share\';lhRender()">🖨 Share &amp; print\u2026</button></div>' +
+
     '<label>Event name</label><input id="lsName" maxlength="60" value="' + escAttr(LH.d.meta.name) + '">' +
     '<div style="display:flex;gap:8px;margin-top:10px;"><div style="flex:1;"><label>Start time</label><input id="lsTime" type="time" value="' + escAttr(LH.d.meta.time||'') + '"></div><div style="flex:1.4;"><label>Venue</label><input id="lsVenue" maxlength="80" value="' + escAttr(LH.d.meta.venue||'') + '"></div></div>' +
     '<div class="lv-sub">\u23F3 Deleted automatically on <b>' + esc(lvExpiryText(LH.d.meta.expiresAt || lvExpiry(LH.d.meta.date, LH.d.meta.createdAt))) + '</b> (7 days after the event date).</div>' +
@@ -6504,7 +6562,7 @@ function lvOpenViewFromInput(){
 function lvOpenView(code, opts){
   if (!liveEnabled()){ toast('Fencing Live is not connected to its database yet'); return; }
   lvCloseView();
-  LV = { code:code, pub:null, res:null, net:'', tab:'bouts', me:Store.get('starport_lv_me_' + code, ''), streams:[] , loaded:false, wantCheckin:!!(opts && opts.checkin), ref:!!(opts && opts.ref) };
+  LV = { code:code, pub:null, res:null, net:'', tab:'bouts', me:Store.get('starport_lv_me_' + code, ''), streams:[] , loaded:false, wantCheckin:!!(opts && opts.checkin), fromLink:!!(opts && opts.fromLink), ref:!!(opts && opts.ref) };
   show('liveView');
   lvvRender();
   lvStartStreams();
@@ -6547,6 +6605,7 @@ function lvvRender(){
       : '<select style="margin-bottom:10px;" onchange="lvvSetMe(this.value)">' + opts + '</select>');
   if (lvIsRef()) html += '<div class="live-banner" style="border-color:rgba(46,125,212,.6);background:rgba(46,125,212,.12);">🧑\u200d⚖️ Refereeing as <b>' + esc(liveConn.ref) + '</b>. Tap a bout to referee it, enter a paper score sheet, or change fencers in a team\u2019s bout order. Bouts you are refereeing are highlighted.</div>';
   else html += lvCheckinBanner(m);
+  if (LV.fromLink){ LV.fromLink = false; var myId = lvMyFid(m); if (m.meta.checkin === 'open' && !(myId && m.checkins[myId])) LV.wantCheckin = true; }
   if (LV.wantCheckin){ LV.wantCheckin = false; setTimeout(function(){ lvCheckinSheet(); }, 0); }
   if (LV.me) html += lvNextBoutHtml(m, LV.me);
   var tabs = [['bouts','Bouts'],['standings','Standings']];
@@ -6673,7 +6732,7 @@ function lvCheckinSheet(q){
     '<input id="ciSearch" placeholder="Search your name" autocomplete="off" oninput="lvCheckinFilter()" value="' + escAttr(q||'') + '">' +
     '<div class="lv-ci-list" id="ciList"></div>' +
     '<div class="lv-sub">Not on the list? Please see the host.</div>' +
-    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>';
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">I\u2019m just watching</button></div>';
   lvSheet(html);
   lvCheckinFilter();
 }
@@ -6758,7 +6817,8 @@ function lvRelayDetails(m, x, open, editFn){
   }
   var rows = lvRelayRows(m, x), ca = 0, cb = 0, me = lvViewMe();
   if (me && rows.some(function(r){ return r.a === me || r.b === me; })) open = true;
-  var h = '<details class="lv-order"' + (open ? ' open' : '') + '><summary>9-bout order \u00b7 ' + esc(x.teamA) + ' v ' + esc(x.teamB) + '</summary><div class="lv-relay">';
+  var h = '<details class="lv-order"' + (open ? ' open' : '') + '><summary>9-bout order \u00b7 ' + esc(x.teamA) + ' v ' + esc(x.teamB) + '</summary><div class="lv-relay lv-relay-ab">' +
+    '<div class="lr-h"><span>#</span><span class="lr-ta">' + esc(x.teamA||'Team A') + '</span><span>Score</span><span class="lr-tb">' + esc(x.teamB||'Team B') + '</span></div>';
   rows.forEach(function(r){
     var played = r.rb && (r.rb.status==='done' || r.rb.ptsA || r.rb.ptsB);
     if (r.rb){ ca += r.rb.ptsA; cb += r.rb.ptsB; }
@@ -6939,7 +6999,9 @@ function lvHandleLink(){
     var mr = h.match(/ref=([A-Za-z0-9]{6})(?:&p=(\d{4,10}))?/);
     if (mr){ try { history.replaceState(null, '', location.pathname); } catch(e){} show('liveHome'); renderLiveHome(); lvRefSheet(mr[1].toUpperCase()); if (mr[2]){ setVal('lrPin', mr[2]); lvRefJoin(); } return true; }
     var mv = h.match(/view=([A-Za-z0-9]{6})/);
-    if (mv){ try { history.replaceState(null, '', location.pathname); } catch(e){} lvOpenView(mv[1].toUpperCase()); return true; }
+    if (mv){ try { history.replaceState(null, '', location.pathname); } catch(e){} lvOpenView(mv[1].toUpperCase(), { fromLink:true }); return true; }
+    var mh = h.match(/host=([A-Za-z0-9]{6})(?:&p=(\d{6}))?(?:&r=(\d{4,10}))?/);
+    if (mh){ try { history.replaceState(null, '', location.pathname); } catch(e){} show('liveHome'); renderLiveHome(); lhOpenSheet(); setVal('loCode', mh[1].toUpperCase()); if (mh[2]){ setVal('loPin', mh[2]); lhPendingRefPin = mh[3] || null; lhLogin(); } return true; }
     if (h.indexOf('live=') >= 0){ show('setup'); return false; }
   } catch(e){}
   return false;
