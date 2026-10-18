@@ -474,6 +474,8 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 #breakTimeSheet{z-index:300;}
 #exitSaveSheet{z-index:80;}
 #confirmSheet{z-index:320;}
+.lv-stage{display:flex;gap:16px;margin:8px 0 0;}
+.lv-stage .lv-check{margin:0;}
 .lv-subtabs{margin:4px 0 10px;overflow-x:auto;flex-wrap:nowrap;}
 .lv-subtabs button{flex:0 0 auto;white-space:nowrap;padding-left:12px;padding-right:12px;}
 .tb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px 10px;padding:0 4px 6px;}
@@ -3534,7 +3536,7 @@ function liveCleanMatch(key, x, defWeapon){
   if (!id) return null;
   var m = {
     id:id, piste:sInt(x.piste,0,99,0), order:sInt(x.order,0,99999,0), fmt:fmt, weapon:w,
-    label:sStr(x.label,60), round:sStr(x.round,30), time:(/^([01]?\d|2[0-3]):[0-5]\d$/.test(String(x.time||'')) ? String(x.time) : ''),
+    label:sStr(x.label,60), round:sStr(x.round,30), stage:(x.stage === 'final' || x.stage === 'bronze') ? x.stage : '', time:(/^([01]?\d|2[0-3]):[0-5]\d$/.test(String(x.time||'')) ? String(x.time) : ''),
     teamA:sStr(x.teamA,40), teamB:sStr(x.teamB,40),
     countryA:sCountry(x.countryA), clubA:sStr(x.clubA,40),
     countryB:sCountry(x.countryB), clubB:sStr(x.clubB,40),
@@ -4735,7 +4737,7 @@ function lvMatchRow(model, x, mineName, extra, ordLabel, tag){
   var winA = st.r && st.r.final && st.r.scoreA > st.r.scoreB, winB = st.r && st.r.final && st.r.scoreB > st.r.scoreA;
   var mine = mineName && lvIsMine(model, x, mineName);
   if (!mine && !mineName && lvIsRef() && model.claims && model.claims[x.id] && model.claims[x.id].status === 'active' && model.claims[x.id].ref === liveConn.ref && !lvClosed(model, x)) mine = true;
-  var meta = [tag || '', x.time ? '\u23F0 ' + x.time : '', x.round, fmtNameById(x.fmt)].filter(Boolean).join(' \u00b7 ');
+  var meta = [tag || '', x.time ? '\u23F0 ' + x.time : '', lhStageText(x.stage), x.round, fmtNameById(x.fmt)].filter(Boolean).join(' \u00b7 ');
   return '<div class="lv-match' + (mine ? ' mine' : '') + '"' + (extra || '') + '>' +
     '<div class="lm-ord">' + (ordLabel != null ? ordLabel : (x.order || '')) + '</div>' +
     '<div class="lm-main">' +
@@ -5467,7 +5469,7 @@ function lhRoundGroups(m){
     var ids = entries.map(function(e){ return e.mid; }).filter(function(id){ return id && lvFindMatch(m, id); });
     ids.forEach(function(id){ used[id] = 1; });
     var n = out.length + 1;
-    out.push({ key:'r' + n, label:'Round ' + n, sub:(name && name !== 'Round ' + n ? name : ''), ids:ids, entries:entries });
+    out.push({ key:'r' + n, label:'Round ' + n, name:name || ('Round ' + n), sub:(name && name !== 'Round ' + n ? name : ''), ids:ids, entries:entries });
   }
   var pools = m.matches.filter(function(x){ return /^Pool /.test(x.round||''); });
   if (pools.length){ pools.forEach(function(x){ used[x.id] = 1; }); out.push({ key:'r1', label:'Round 1', sub:'Pools', ids:pools.map(function(x){ return x.id; }), entries:null }); }
@@ -5478,9 +5480,9 @@ function lhRoundGroups(m){
   order.sort(function(a,c){ return a.localeCompare(c, undefined, {numeric:true}); });
   order.forEach(function(k){
     var mm = /^Round (\d+)$/.exec(k);
-    var same = out.filter(function(g){ return g.label === k; })[0];
+    var same = out.filter(function(g){ return g.label === k || g.name === k; })[0];
     if (same){ same.ids = same.ids.concat(rest[k]); return; }
-    out.push({ key:'x' + out.length, label:k, sub:'', ids:rest[k], entries:null });
+    out.push({ key:'x' + out.length, label:(mm || k === 'Other bouts') ? k : 'Round ' + (out.length + 1), name:k, sub:(mm || k === 'Other bouts') ? '' : k, ids:rest[k], entries:null });
   });
   return out;
 }
@@ -5499,7 +5501,7 @@ function lhTableauHtml(m, groups){
         return '<div class="tb-m' + (x ? '' : ' tb-wait') + '"' + (x ? ' onclick="lhBoutSheet(\'' + x.id + '\')"' : '') + '>' +
           '<div class="tb-l' + (wa ? ' win' : (wb ? ' lose' : '')) + '"><span>' + esc(na || 'TBC') + '</span><b>' + (hs ? r.scoreA : '') + '</b></div>' +
           '<div class="tb-l' + (wb ? ' win' : (wa ? ' lose' : '')) + '"><span>' + esc(nb || 'TBC') + '</span><b>' + (hs ? r.scoreB : '') + '</b></div>' +
-          (x && x.piste ? '<div class="tb-p">Piste ' + x.piste + (r && !r.final && hs ? ' \u00b7 live' : '') + '</div>' : '') + '</div>';
+          (x && (x.piste || x.stage) ? '<div class="tb-p">' + [lhStageText(x.stage), x.piste ? 'Piste ' + x.piste : '', r && !r.final && hs ? 'live' : ''].filter(Boolean).join(' \u00b7 ') + '</div>' : '') + '</div>';
       }).join('') + '</div></div>';
   }).join('');
   var pod = ''; try { pod = lvPodiumHtml(m, lhBuildPublic()); } catch(e){}
@@ -5544,12 +5546,10 @@ function lhBoutSheet(id, kindOverride){
       '<input id="lbPx" type="number" inputmode="numeric" min="1" max="99" placeholder="Piste no." style="display:none;margin-top:6px;"></div>' +
     '<div style="flex:1.3;"><label>Round</label>' + lhRoundField() + '</div></div>' +
     '<div style="display:flex;gap:8px;margin-top:10px;align-items:flex-end;"><div style="flex:1;"><label>Start time (optional)</label><input id="lbT" type="time"></div><div style="flex:1.3;" class="lv-sub">Shows on the viewers\u2019 schedule.</div></div>' +
+    lhStageField() +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Cancel</button><button class="btn btn-gold btn-block" onclick="lhSaveBout(' + (id ? '\'' + id + '\'' : 'null') + ',\'' + kind + '\')">Save</button></div>' +
     (x ? '' : '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lhSaveBout(null,\'' + kind + '\',true)">Save and add another ' + noun + '</button></div>');
   if (x){
-    if (kind === 'team') html += '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lhOrderSheet(\'' + id + '\')">⇄ Bout order — who fences which bout' + (x.ordA || x.ordB ? ' (custom)' : '') + '</button></div>';
-    var pl = lhPisteBouts(x.piste||0), pi = pl.indexOf(id);
-    if (pl.length > 1) html += '<div class="sheet-row"><button class="btn btn-ghost btn-block"' + (pi <= 0 ? ' disabled' : '') + ' onclick="lvCloseSheet();lhMoveBout(\'' + id + '\',-1)">▲ Earlier on ' + (x.piste ? 'Piste ' + x.piste : 'the list') + '</button><button class="btn btn-ghost btn-block"' + (pi >= pl.length-1 ? ' disabled' : '') + ' onclick="lvCloseSheet();lhMoveBout(\'' + id + '\',1)">▼ Later</button></div>';
     html += '<div class="sheet-row"><button class="btn btn-primary btn-block" onclick="lhOpenInScoreboard(\'' + id + '\')">⚔ Open in Scoreboard</button></div>' +
       '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lhResultSheet(\'' + id + '\')">\uD83D\uDCDD Score sheet (enter or fix scores)</button></div>' +
       '<div class="sheet-row"><button class="btn btn-ghost btn-block" style="color:var(--red2);border-color:rgba(231,76,60,.4);" onclick="lhDeleteBout(\'' + id + '\')">Delete ' + noun + '</button></div>';
@@ -5557,6 +5557,7 @@ function lhBoutSheet(id, kindOverride){
   lvSheet(html);
   if (x){
     lhSetPisteField(x.piste||0); lhSetRound(x.round||''); setVal('lbT', x.time||'');
+    try { document.getElementById('lbFinal').checked = x.stage === 'final'; document.getElementById('lbBronze').checked = x.stage === 'bronze'; } catch(e){}
     if (kind==='team'){ setVal('lbA', x.aRef||''); setVal('lbB', x.bRef||''); var dr = LH.d.meta.reserves === true; var ca = document.getElementById('lbResA'), cb = document.getElementById('lbResB'); if (ca) ca.checked = (x.resA === true || x.resA === false) ? x.resA : dr; if (cb) cb.checked = (x.resB === true || x.resB === false) ? x.resB : dr; }
     else { setVal('lbFmt', x.fmt); setVal('lbA', x.aRef||''); setVal('lbB', x.bRef||''); if (!x.aRef) setVal('lbAn', x.teamA||''); if (!x.bRef) setVal('lbBn', x.teamB||''); }
   } else {
@@ -5686,20 +5687,48 @@ function lhRounds(){
   Object.keys(LH.d.matches).forEach(function(k){ var r = LH.d.matches[k].round; if (r && !seen[r]){ seen[r] = 1; list.push(r); } });
   return list.sort(function(a,b){ return a.localeCompare(b, undefined, {numeric:true}); });
 }
-function lhRoundField(){
-  var opts = '<option value="">No round</option>' + lhRounds().map(function(r){ return '<option value="' + escAttr(r) + '">' + esc(r) + '</option>'; }).join('') +
-    '<option value="__new">New round\u2026</option>';
-  return '<select id="lbRs" onchange="lhRoundPick()">' + opts + '</select><input id="lbR" maxlength="30" placeholder="e.g. Round 2" style="display:none;margin-top:6px;">';
+function lhRoundChoices(){
+  var gs = []; try { gs = lhRoundGroups(lhModel()); } catch(e){}
+  return gs.filter(function(g){ return g.sub !== 'Pools'; }).map(function(g){ return { value:g.name || g.label, text:g.label + (g.sub ? ' \u00b7 ' + g.sub : '') }; });
 }
-function lhRoundPick(){ var nw = lvVal('lbRs') === '__new', i = document.getElementById('lbR'); if (i){ i.style.display = nw ? 'block' : 'none'; if (nw) setTimeout(function(){ try { i.focus(); } catch(e){} }, 30); } }
+function lhRoundField(){
+  var ch = lhRoundChoices(), next = 'Round ' + (ch.length + 1);
+  var opts = ch.map(function(c){ return '<option value="' + escAttr(c.value) + '">' + esc(c.text) + '</option>'; }).join('') +
+    '<option value="__new">+ New round (' + esc(next) + ')</option><option value="">No round</option>';
+  return '<select id="lbRs" onchange="lhRoundPick()">' + opts + '</select><input id="lbR" maxlength="30" placeholder="' + escAttr(next) + '" style="display:none;margin-top:6px;">';
+}
+function lhStageField(){
+  return '<div class="lv-stage"><label class="lv-check"><input type="checkbox" id="lbFinal" onchange="if(this.checked)document.getElementById(\'lbBronze\').checked=false"> 🥇 Final</label>' +
+    '<label class="lv-check"><input type="checkbox" id="lbBronze" onchange="if(this.checked)document.getElementById(\'lbFinal\').checked=false"> 🥉 Bronze final</label></div>';
+}
+function lhStageText(st){ return st === 'final' ? '🥇 Final' : (st === 'bronze' ? '🥉 Bronze final' : ''); }
+function lhRoundPick(){ var nw = lvVal('lbRs') === '__new', i = document.getElementById('lbR'); if (i){ i.style.display = nw ? 'block' : 'none'; if (nw && !i.value) i.value = i.placeholder; if (nw) setTimeout(function(){ try { i.focus(); } catch(e){} }, 30); } }
 function lhSetRound(r){
   var sel = document.getElementById('lbRs'); if (!sel) return;
-  if (!r){ sel.value = lhRounds().length ? '' : '__new'; if (!lhRounds().length) setVal('lbR', 'Round 1'); lhRoundPick(); return; }
+  if (!r){ var ch = lhRoundChoices(); if (ch.length) sel.value = ch[ch.length-1].value; else { sel.value = '__new'; setVal('lbR', 'Round 1'); } lhRoundPick(); return; }
   var has = false; for (var i=0;i<sel.options.length;i++) if (sel.options[i].value === r) has = true;
   if (has) sel.value = r; else { sel.value = '__new'; setVal('lbR', r); }
   lhRoundPick();
 }
 function lhReadRound(){ return lvVal('lbRs') === '__new' ? sStr(lvVal('lbR'),30) : sStr(lvVal('lbRs'),30); }
+/* a team match added or edited by hand joins its round in the team draw (tableau, next round) */
+function lhTrJoin(mid, rec){
+  var tr = lhTR(); if (!tr) return;
+  var r = null;
+  if (rec.round){
+    r = tr.rounds.filter(function(q){ return q.name === rec.round; })[0];
+    if (!r){ var mm = /^Round (\d+)$/.exec(rec.round); if (mm && tr.rounds[+mm[1]-1]) r = tr.rounds[+mm[1]-1]; }
+  }
+  var kept = false;
+  tr.rounds.forEach(function(q){ q.pairs = (q.pairs || []).filter(function(p){
+    if (p.mid !== mid) return true;
+    if (q === r){ p.a = rec.aRef; p.b = rec.bRef; kept = true; return true; }   // same round: keep its place
+    return false;
+  }); });
+  if (!rec.round || kept) return;
+  if (!r){ r = { name:rec.round, pairs:[] }; tr.rounds.push(r); }
+  r.pairs.push({ a:rec.aRef, b:rec.bRef, mid:mid });
+}
 function lhSaveBout(id, kind, again){
   var d = LH.d, piste = lhReadPiste(), round = lhReadRound();
   if (piste < 0){ toast('Type a piste number from 1 to 99'); return; }
@@ -5725,10 +5754,14 @@ function lhSaveBout(id, kind, again){
     rec = { fmt:fmt, aRef:fa ? a : null, bRef:fb ? b : null, teamA:nameA, teamB:nameB };
   }
   rec.piste = piste; rec.round = round; rec.weapon = d.meta.weapon; rec.time = tm || null;
+  var stF = document.getElementById('lbFinal'), stB = document.getElementById('lbBronze');
+  rec.stage = (stF && stF.checked) ? 'final' : ((stB && stB.checked) ? 'bronze' : null);
   if (x && (x.piste||0) === piste) rec.order = x.order;
   else rec.order = lhPisteBouts(piste).length + 1;
   var oldPiste = x ? (x.piste||0) : null;
-  d.matches[id || lvId('m')] = rec;
+  var mid = id || lvId('m');
+  d.matches[mid] = rec;
+  if (kind === 'team') lhTrJoin(mid, rec);
   if (oldPiste !== null && oldPiste !== piste) lhRenumber(oldPiste);
   Store.set('starport_lh_lastpiste', piste);
   LH.lastRound = round;
@@ -5836,7 +5869,7 @@ function lhTrSuggest(){
     return { n:1, name:lhRoundNameFor(seeds.length, 1), pairs:pairs, note:note || 'Seeded by team skill: strongest v weakest.' };
   }
   var last = tr.rounds[tr.rounds.length-1], adv = [];
-  last.pairs.forEach(function(pr){ var res = lhPairResult(pr); if (!res.done){ if (pr.a && pr.b) waiting++; return; } adv.push({ t:res.winner, perf:res.bye ? 999 : res.wDiff, f:res.wFor||0, s:lhTeamStrength(res.winner) }); });
+  last.pairs.forEach(function(pr){ var mx0 = pr.mid && LH.d.matches[pr.mid]; if (mx0 && mx0.stage === 'bronze') return; var res = lhPairResult(pr); if (!res.done){ if (pr.a && pr.b) waiting++; return; } adv.push({ t:res.winner, perf:res.bye ? 999 : res.wDiff, f:res.wFor||0, s:lhTeamStrength(res.winner) }); });
   adv.sort(function(a,b){ return (b.perf - a.perf) || (b.f - a.f) || (b.s - a.s); });
   var ranked = adv.map(function(x){ return x.t; }), k2 = ranked.length;
   if (waiting) note = waiting + ' match' + (waiting>1?'es':'') + ' in ' + last.name + ' not finished yet \u2014 those teams are not included. You can wait, or pick teams yourself below.';
