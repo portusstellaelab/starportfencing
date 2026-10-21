@@ -6305,6 +6305,22 @@ function lhResultsHtml(){
 }
 /* Live ranking after every finished match: wins, then indicator, then touches scored.
    Tap a medal to set gold / silver / bronze (bronze can be several). */
+/* Rank labels with ties: nobody ranked before a result ('–'); equal records share
+   the best place, shown as "3=" (sports-style: 1, 2, 3=, 3=, 5). */
+function lvRankLabels(list, keyFn){
+  var out = [], prevKey = null, prevRank = 0;
+  list.forEach(function(x, i){
+    if (!x.m && !x.md){ out.push('\u2013'); return; }
+    var k = keyFn(x);
+    var rank = (k === prevKey) ? prevRank : i + 1;
+    out.push(rank); prevKey = k; prevRank = rank;
+  });
+  return out.map(function(r, i){
+    if (typeof r !== 'number') return r;
+    var tie = out.some(function(o, j){ return j !== i && o === r; });
+    return tie ? r + '=' : String(r);
+  });
+}
 function lhRankingHtml(m){
   var team = LH.d.meta.type === 'teams' || (LH.d.meta.type !== 'individual' && m.teams.length > 0);
   var list = lvStandings(m, team), byName = {};
@@ -6321,9 +6337,11 @@ function lhRankingHtml(m){
   if (!list.length) return '';
   var html = '<div class="section-head">Ranking <span style="float:right;text-transform:none;letter-spacing:0;font-family:\'DM Sans\',sans-serif;">tap a medal to award it</span></div>' +
     '<div class="lv-table"><div class="lt-row lt-rank lt-head"><span>#</span><span>' + (team ? 'Team' : 'Fencer') + '</span><span>W/M</span><span>Ind</span><span>Medal</span></div>';
+  list.forEach(function(x){ x.md = medal(idOf[x.name]); });
+  var labels = lvRankLabels(list, function(x){ return [x.md, x.v, x.m, x.ind, x.ts].join('|'); });
   list.forEach(function(x, i){
     var id = idOf[x.name], md = medal(id);
-    html += '<div class="lt-row lt-rank' + (md ? ' medal-' + md : '') + '"><span>' + (i+1) + '</span><span class="lt-name">' + esc(x.name) + '</span><span>' + x.v + '/' + x.m + '</span><span>' + (x.ind>0?'+':'') + x.ind + '</span><span class="lt-medals">' +
+    html += '<div class="lt-row lt-rank' + (md ? ' medal-' + md : '') + '"><span>' + labels[i] + '</span><span class="lt-name">' + esc(x.name) + '</span><span>' + x.v + '/' + x.m + '</span><span>' + (x.ind>0?'+':'') + x.ind + '</span><span class="lt-medals">' +
       (id ? ['g','s','b'].map(function(k){ return '<button class="' + (md===k ? 'on' : '') + '" onclick="lhSetMedal(\'' + id + '\',\'' + k + '\')">' + ({g:'🥇',s:'🥈',b:'🥉'})[k] + '</button>'; }).join('') : '') + '</span></div>';
   });
   html += '</div><div class="lv-sub">Ranked by wins, then indicator (touches scored minus received), then touches scored. Medals show to everyone after you Publish.</div>';
@@ -6530,7 +6548,7 @@ function lhPrint(kind){
     var pod = rk.list.filter(function(x){ return x.md; });
     if (pod.length) html += '<div class="pv-podium">' + pod.map(function(x){ return '<div><span>' + medal[x.md] + '</span><b>' + pvEsc(x.name) + '</b></div>'; }).join('') + '</div>';
     if (rk.list.length) html += '<div class="pv-piste">Ranking</div><table class="pv-t pv-grid"><tr><th>#</th><th>' + (team ? 'Team' : 'Fencer') + '</th><th>W/M</th><th>TS</th><th>TR</th><th>Ind</th></tr>' +
-      rk.list.map(function(x, i){ return '<tr><td class="pv-c">' + (i+1) + '</td><td><b>' + pvEsc(x.name) + '</b>' + (x.md ? ' ' + medal[x.md] : '') + '</td><td class="pv-c">' + x.v + '/' + x.m + '</td><td class="pv-c">' + x.ts + '</td><td class="pv-c">' + x.tr + '</td><td class="pv-c">' + (x.ind > 0 ? '+' : '') + x.ind + '</td></tr>'; }).join('') + '</table>';
+      (function(){ var lb = lvRankLabels(rk.list, function(x){ return [x.md, x.v, x.m, x.ind, x.ts].join('|'); }); return rk.list.map(function(x, i){ return '<tr><td class="pv-c">' + lb[i] + '</td><td><b>' + pvEsc(x.name) + '</b>' + (x.md ? ' ' + medal[x.md] : '') + '</td><td class="pv-c">' + x.v + '/' + x.m + '</td><td class="pv-c">' + x.ts + '</td><td class="pv-c">' + x.tr + '</td><td class="pv-c">' + (x.ind > 0 ? '+' : '') + x.ind + '</td></tr>'; }).join(''); })() + '</table>';
     var groups = []; try { groups = lhRoundGroups(m); } catch(e){}
     if (!groups.length) groups = [{ label:'Matches', sub:'', ids:m.matches.map(function(x){ return x.id; }) }];
     groups.forEach(function(g){
@@ -7360,9 +7378,10 @@ function lvStandingsHtml(m){
     html += '<div class="section-head">' + (team ? 'Teams' : 'Individual') + '</div>' +
       '<div class="lv-table"><div class="lt-row lt-head"><span>#</span><span>Name</span><span>V/M</span><span>TS</span><span>TR</span><span>Ind</span></div>';
     var myTeam = ''; if (team && LV && LV.me) m.teams.forEach(function(t){ if (t.members.some(function(f){ return f.name === LV.me; })) myTeam = t.name; });
+    var labels = lvRankLabels(list, function(x){ return [x.ratio, x.ind, x.ts].join('|'); });
     list.forEach(function(x, i){
       var mine = LV && LV.me && (x.name === LV.me || (team && x.name === myTeam));
-      html += '<div class="lt-row' + (mine ? ' mine' : '') + '"><span>' + (i+1) + '</span><span class="lt-name">' + (mine ? '⭐ ' : '') + esc(x.name) + '</span><span>' + x.v + '/' + x.m + '</span><span>' + x.ts + '</span><span>' + x.tr + '</span><span>' + (x.ind>0?'+':'') + x.ind + '</span></div>';
+      html += '<div class="lt-row' + (mine ? ' mine' : '') + '"><span>' + labels[i] + '</span><span class="lt-name">' + (mine ? '⭐ ' : '') + esc(x.name) + '</span><span>' + x.v + '/' + x.m + '</span><span>' + x.ts + '</span><span>' + x.tr + '</span><span>' + (x.ind>0?'+':'') + x.ind + '</span></div>';
     });
     html += '</div>';
   });
