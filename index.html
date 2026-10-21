@@ -474,6 +474,13 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 #breakTimeSheet{z-index:300;}
 #exitSaveSheet{z-index:80;}
 #confirmSheet{z-index:320;}
+.mg-list{max-height:46vh;overflow-y:auto;border:1px solid var(--border);border-radius:10px;}
+.mg-row{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--border);margin:0;text-transform:none;letter-spacing:normal;font-size:14px;color:var(--white);cursor:pointer;}
+.mg-row:first-child{border-top:none;}
+.mg-row input{width:20px;height:20px;flex-shrink:0;}
+.mg-main{display:flex;flex-direction:column;min-width:0;}
+.mg-main b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mg-main small{color:var(--muted);font-size:12px;}
 .lv-scanbtn{font-size:17px;padding:15px;margin:0 0 8px;}
 #qrScan{display:none;position:fixed;inset:0;z-index:520;background:#000;color:#fff;flex-direction:column;}
 #qrScan.on{display:flex;}
@@ -687,6 +694,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
   <div class="lv-card">
     <div class="lv-team-name" style="margin-bottom:8px;">&#127941; Host an event</div>
     <div class="live-actions" style="margin:0;"><button class="btn btn-gold" onclick="lhCreateSheet()">Create new event</button><button class="btn btn-ghost" onclick="lhOpenSheet()">Open my event</button></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px;" onclick="lhManageSheet()">&#129529; Manage my events (delete old or test events)</button>
   </div>
   <div id="lvRecent"></div>
 </section>
@@ -3479,7 +3487,7 @@ document.addEventListener('visibilitychange', function(){
    4. Results are saved on this device first. A failed upload is
       kept in an outbox until the referee taps Retry.
    ============================================================ */
-var LIVE_DB = 'https://starport-live-default-rtdb.asia-southeast1.firebasedatabase.app';          // Firebase Realtime Database URL, set when Starport Live is set up
+var LIVE_DB = 'https://starport-live.portusstellaelab.workers.dev';          // Fencing Live server (Cloudflare). A Firebase database URL also still works.
 var LIVE_NS = '';          // only used for local testing against the Firebase emulator
 var LIVE_SCHEMA = 1;       // data format version shared with Starport Live
 var LIVE_APP_VERSION = 'scoreboard-1.1';
@@ -3495,6 +3503,8 @@ function liveLoadConn(){
 }
 function liveSaveConn(){ Store.set('starport_live', liveConn); }
 function liveEnabled(){ return !!LIVE_DB; }
+/* Cloudflare backend (any address that isn't Firebase or the Firebase emulator) */
+function liveIsCF(){ return !!LIVE_DB && !/firebase(io)?\.|firebasedatabase\.app|:9000\b/.test(String(LIVE_DB)); }
 function liveUrl(path){ return String(LIVE_DB).replace(/\/+$/,'') + (path || '/') + '.json' + (LIVE_NS ? '?ns=' + encodeURIComponent(LIVE_NS) : ''); }
 function liveDeviceId(){
   var d = Store.get('starport_device', null);
@@ -3525,10 +3535,13 @@ function liveFetch(method, path, body){
     var t = setTimeout(function(){ try { if (ctrl) ctrl.abort(); } catch(e){} fin({ok:false, status:0, err:'timeout'}); }, 10000);
     try {
       var opt = { method:method, headers:{'Content-Type':'application/json'}, cache:'no-store' };
+      var u = liveUrl(path);
+      // Cloudflare: send writes as a "simple" POST (no extra browser pre-flight request, so half the request count)
+      if (liveIsCF() && method !== 'GET'){ u += (u.indexOf('?') >= 0 ? '&' : '?') + 'm=' + method; opt.method = 'POST'; opt.headers = {'Content-Type':'text/plain;charset=UTF-8'}; }
       if (body != null) opt.body = JSON.stringify(body);
       if (liveKeepAlive && opt.body && opt.body.length < 60000) opt.keepalive = true;
       if (ctrl) opt.signal = ctrl.signal;
-      fetch(liveUrl(path), opt).then(function(r){
+      fetch(u, opt).then(function(r){
         return r.text().then(function(txt){
           var d = null; try { d = txt ? JSON.parse(txt) : null; } catch(e){ d = null; }
           clearTimeout(t); fin({ok:r.ok, status:r.status, data:d});
@@ -4657,10 +4670,31 @@ function lvStream(path, onData, onState){
       if (closed) return;
       if (r.ok){ tree = r.data; try { onData(tree); } catch(e){} onState('poll'); }
       else onState('offline');
-      pollT = setTimeout(poll, 20000);
+      pollT = setTimeout(poll, 30000);
     });
   }
+  var ws = null, pingT = null, wsTries = 0, wsT = null;
+  function startWS(){
+    if (closed) return;
+    var u = liveUrl(path).replace(/^http/, 'ws');
+    try { ws = new WebSocket(u); } catch(e){ poll(); return; }
+    ws.onopen = function(){ wsTries = 0; onState('live'); clearInterval(pingT); pingT = setInterval(function(){ try { if (ws && ws.readyState === 1) ws.send('ping'); } catch(x){} }, 45000); };
+    ws.onmessage = function(e){
+      if (e.data === 'pong') return;
+      var d; try { d = JSON.parse(e.data); } catch(x){ return; }
+      if (d && (d.event === 'put' || d.event === 'patch')){ errors = 0; onState('live'); apply(d.event, JSON.stringify(d.data)); }
+    };
+    ws.onclose = function(){
+      clearInterval(pingT); ws = null;
+      if (closed) return;
+      wsTries++; onState('reconnecting');
+      if (wsTries > 5){ poll(); return; }               // give up on live updates: refresh every 30 s instead
+      wsT = setTimeout(startWS, Math.min(30000, 1000 * Math.pow(2, wsTries)));
+    };
+    ws.onerror = function(){ try { ws.close(); } catch(x){} };
+  }
   function start(){
+    if (liveIsCF()){ if (typeof WebSocket === 'undefined') poll(); else startWS(); return; }
     if (typeof EventSource === 'undefined'){ poll(); return; }
     try { es = new EventSource(liveUrl(path)); } catch(e){ poll(); return; }
     es.addEventListener('put', function(e){ errors = 0; onState('live'); apply('put', e.data); });
@@ -4674,7 +4708,7 @@ function lvStream(path, onData, onState){
   }
   if (!liveEnabled()){ onState('offline'); return { close:function(){} }; }
   start();
-  return { close:function(){ closed = true; try { if (es) es.close(); } catch(x){} clearTimeout(pollT); } };
+  return { close:function(){ closed = true; try { if (es) es.close(); } catch(x){} try { if (ws) ws.close(); } catch(x){} clearInterval(pingT); clearTimeout(wsT); clearTimeout(pollT); } };
 }
 
 /* ---------- clean event data for display ---------- */
@@ -6702,6 +6736,79 @@ function lhSaveSettings(){
   LH.d.meta.expiresAt = lvExpiry(LH.d.meta.date, LH.d.meta.createdAt);
   lvCloseSheet(); lvRemember(LH.code, name, 'host'); lhDirty();
   toast('Settings saved \u2014 tap Publish');
+}
+/* ---------- manage the events this phone hosts: select several and delete them ---------- */
+function lhLocalEvents(){
+  var out = [];
+  try {
+    for (var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i); if (!/^starport_host_[A-Z0-9]{6}$/.test(k||'')) continue;
+      var v = Store.get(k, null); if (!v || !v.code || !v.hostPin) continue;
+      var meta = (v.d && v.d.meta) || {};
+      out.push({ code:v.code, pin:v.hostPin, name:meta.name || v.code, date:meta.date || '', created:meta.createdAt || 0,
+                 expires:meta.expiresAt || lvExpiry(meta.date, meta.createdAt), n:Object.keys((v.d && v.d.fencers) || {}).length });
+    }
+  } catch(e){}
+  return out.sort(function(a,b){ return (b.created||0) - (a.created||0); });
+}
+var lhMng = null;
+function lhManageSheet(){
+  var list = lhLocalEvents();
+  lhMng = { list:list, sel:{} };
+  if (!list.length){ lvSheet('<div class="sheet-title">🧹 My events</div><div class="lv-sub" style="margin-top:0;">This phone doesn\u2019t host any events. Events you open with a code and host PIN show up here.</div><div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>'); return; }
+  lhManageRender();
+}
+function lhManageRender(){
+  var M2 = lhMng, now = Date.now();
+  var rows = M2.list.map(function(e, i){
+    var past = e.expires && e.expires < now;
+    return '<label class="mg-row"><input type="checkbox"' + (M2.sel[i] ? ' checked' : '') + ' onchange="lhMng.sel[' + i + ']=this.checked;lhManageCount()">' +
+      '<span class="mg-main"><b>' + esc(e.name) + '</b><small>' + esc([e.code, auDate(e.date), e.n + ' fencer' + (e.n === 1 ? '' : 's'), past ? 'past \u2014 auto-deletes soon' : 'auto-deletes ' + lvExpiryText(e.expires)].filter(Boolean).join(' \u00b7 ')) + '</small></span></label>';
+  }).join('');
+  lvSheet('<div class="sheet-title">🧹 My events</div>' +
+    '<div class="lv-sub" style="margin-top:0;">Events this phone hosts. Tick the ones you don\u2019t need any more. Every event also deletes itself 7 days after its date.</div>' +
+    '<div class="live-actions" style="margin:4px 0 8px;"><button class="btn btn-ghost btn-sm" onclick="lhManageAll(true)">Select all</button><button class="btn btn-ghost btn-sm" onclick="lhManageAll(false)">Select none</button></div>' +
+    '<div class="mg-list">' + rows + '</div>' +
+    '<div id="mgMsg" class="lv-sub" style="min-height:18px;"></div>' +
+    '<div class="sheet-row" style="flex-direction:column;gap:8px;"><button class="btn btn-block" id="mgDel" style="background:var(--red2);color:#fff;" onclick="lhManageDelete()">Delete selected for everyone</button>' +
+    '<button class="btn btn-ghost btn-block" onclick="lhManageForget()">Only remove from this phone</button>' +
+    '<button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>');
+  lhManageCount();
+}
+function lhManageAll(on){ lhMng.list.forEach(function(e, i){ lhMng.sel[i] = on; }); lhManageRender(); }
+function lhManageChosen(){ return lhMng.list.filter(function(e, i){ return lhMng.sel[i]; }); }
+function lhManageCount(){ var n = lhManageChosen().length, b = document.getElementById('mgDel'); if (b){ b.disabled = !n; b.textContent = n ? 'Delete ' + n + ' event' + (n > 1 ? 's' : '') + ' for everyone' : 'Delete selected for everyone'; } }
+function lhForgetLocal(code){ try { Store.set('starport_host_' + code, null); } catch(e){} try { localStorage.removeItem('starport_host_' + code); } catch(e){} lvForget(code, null); }
+function lhManageForget(){
+  var ch = lhManageChosen(); if (!ch.length){ toast('Tick at least one event'); return; }
+  askConfirm('Remove ' + ch.length + ' event' + (ch.length > 1 ? 's' : '') + ' from this phone only? They stay on Fencing Live for everyone else until they expire.', function(){
+    ch.forEach(function(e){ lhForgetLocal(e.code); });
+    toast('Removed from this phone'); renderLiveHome(); lhManageSheet();
+  });
+}
+function lhManageDelete(){
+  var ch = lhManageChosen(); if (!ch.length){ toast('Tick at least one event'); return; }
+  askConfirm('Delete ' + ch.length + ' event' + (ch.length > 1 ? 's' : '') + ' for everyone? Fencers, bouts and results are removed from Fencing Live. This cannot be undone.', function(){
+    var done = 0, okN = 0, failed = [], msg = document.getElementById('mgMsg');
+    function next(){
+      if (done >= ch.length){
+        toast(okN + ' deleted' + (failed.length ? ' \u00b7 ' + failed.length + ' not deleted' : ''));
+        renderLiveHome(); lhManageSheet();
+        if (failed.length) setTimeout(function(){ var m = document.getElementById('mgMsg'); if (m){ m.style.color = '#f0c000'; m.textContent = 'Not deleted: ' + failed.join(', ') + '. Check the internet and try again, or use \u201cOnly remove from this phone\u201d if the event is already gone.'; } }, 50);
+        return;
+      }
+      var e = ch[done]; if (msg) msg.textContent = 'Deleting ' + e.name + '\u2026';
+      var N = lvNonce(), body = { public:{ _n:N, meta:{ name:e.name, deleted:true, schema:LIVE_SCHEMA } } };
+      body['hostAuth/' + N] = { pin:e.pin, at:{'.sv':'timestamp'} };
+      liveFetch('PATCH', '/events/' + sId(e.code), body).then(function(r){
+        done++;
+        if (r.ok){ okN++; lhForgetLocal(e.code); if (LH && LH.code === e.code) lhClose('all'); }
+        else failed.push(e.name);
+        next();
+      });
+    }
+    next();
+  });
 }
 function lhDeleteEvent(){
   askConfirm('Delete ' + LH.d.meta.name + ' for everyone? This cannot be undone.', function(){
