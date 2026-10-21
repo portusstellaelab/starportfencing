@@ -4673,7 +4673,7 @@ function lvStream(path, onData, onState){
       pollT = setTimeout(poll, 30000);
     });
   }
-  var ws = null, pingT = null, wsTries = 0, wsT = null;
+  var ws = null, pingT = null, wsTries = 0, wsT = null, blockedWS = false;
   function startWS(){
     if (closed) return;
     var u = liveUrl(path).replace(/^http/, 'ws');
@@ -4682,11 +4682,13 @@ function lvStream(path, onData, onState){
     ws.onmessage = function(e){
       if (e.data === 'pong') return;
       var d; try { d = JSON.parse(e.data); } catch(x){ return; }
+      if (d && d.event === 'blocked'){ blockedWS = true; try { ws.close(); } catch(x){} onState('offline'); return; }   // the organiser blocked this connection
       if (d && (d.event === 'put' || d.event === 'patch')){ errors = 0; onState('live'); apply(d.event, JSON.stringify(d.data)); }
     };
-    ws.onclose = function(){
+    ws.onclose = function(e){
       clearInterval(pingT); ws = null;
       if (closed) return;
+      if (blockedWS || (e && e.code === 4003)){ onState('offline'); return; }
       wsTries++; onState('reconnecting');
       if (wsTries > 5){ poll(); return; }               // give up on live updates: refresh every 30 s instead
       wsT = setTimeout(startWS, Math.min(30000, 1000 * Math.pow(2, wsTries)));
