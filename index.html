@@ -352,6 +352,15 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .lt-medals button{width:30px;height:30px;border-radius:7px;font-size:16px;opacity:.25;filter:grayscale(1);}
 .lt-medals button.on{opacity:1;filter:none;background:rgba(201,162,39,.2);}
 .lt-row.medal-g{background:rgba(201,162,39,.16);} .lt-row.medal-s{background:rgba(200,200,210,.10);} .lt-row.medal-b{background:rgba(205,127,50,.14);}
+.app-note{background:rgba(201,162,39,.14);border:1px solid rgba(201,162,39,.45);color:var(--white);border-radius:12px;padding:10px 12px;margin-top:16px;font-size:14px;line-height:1.45;white-space:pre-wrap;}
+.app-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:22px;}
+.app-links:empty{display:none;}
+.app-link{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:8px 14px;font-size:14px;font-family:inherit;cursor:pointer;}
+.app-link.gold{border-color:rgba(201,162,39,.6);color:var(--gold);}
+.dn-text{white-space:pre-wrap;font-size:15px;line-height:1.55;color:var(--white);margin:0 0 16px;}
+.fb-kinds{display:flex;gap:8px;margin:0 0 10px;}
+.fb-k{flex:1;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:9px 4px;font-size:14px;font-family:inherit;cursor:pointer;}
+.fb-k.on{border-color:var(--gold);color:var(--gold);background:rgba(201,162,39,.1);font-weight:600;}
 .copy-line{text-align:center;font-size:11px;color:var(--muted);opacity:.7;margin:18px 0 6px;line-height:1.5;}
 .lv-x{width:32px;height:32px;border-radius:8px;color:var(--muted);font-size:20px;flex-shrink:0;}
 .held-cards-line{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin:2px 0 8px;font-family:'DM Mono',monospace;min-height:15px;}
@@ -662,6 +671,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
     <div><span class="logo-main">STARPORT</span><span class="logo-sub">Fencing</span></div>
     <button class="gear-btn" onclick="openSettings()" aria-label="Settings">&#9881;</button>
   </div>
+  <div id="appNote"></div>
   <div class="home-cards">
     <button class="home-card sb" onclick="goScoreboard()">
       <div class="hc-icon">&#9876;</div>
@@ -674,6 +684,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
       <div class="hc-desc">Host an event or follow one live. Needs internet.</div>
     </button>
   </div>
+  <div class="app-links"></div>
   <div class="copy-line">© 2026 Portus Stellae Lab. All rights reserved.<br>Starport Fencing</div>
 </section>
 
@@ -697,6 +708,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
     <button class="btn btn-ghost btn-block" style="margin-top:8px;" onclick="lhManageSheet()">&#129529; Manage my events (delete old or test events)</button>
   </div>
   <div id="lvRecent"></div>
+  <div class="app-links"></div>
 </section>
 
 <section class="view" id="liveHost">
@@ -709,6 +721,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
 <section class="view" id="liveView">
   <div class="lv-head"><button class="btn btn-ghost btn-sm" onclick="goLive()">&larr; Back</button><span class="lv-title" id="lvvTitle"></span><span class="lv-net" id="lvvNet"></span></div>
   <div id="lvvBody"></div>
+  <div class="app-links" style="margin-bottom:10px;"></div>
 </section>
 
 <section class="view" id="setup">
@@ -1087,6 +1100,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
     <div class="sheet-row">
       <button class="btn btn-gold btn-block" onclick="closeSheet('settingsSheet')">Done</button>
     </div>
+    <div class="app-links" style="margin-top:14px;"></div>
     <div class="copy-line" style="margin-top:14px;">© 2026 Portus Stellae Lab. All rights reserved.
     </div>
   </div>
@@ -7484,6 +7498,74 @@ function lvHandleLink(){
   return false;
 }
 
+
+/* ---------- app settings from the owner's admin page: donation section, notice, feedback ---------- */
+var APP_CFG = Store.get('starport_cfg', null), FB_CTX = {}, FB_KIND = 'idea';
+function appPlat(){ try { if (isNative()){ var C = window.Capacitor; return (C.getPlatform && C.getPlatform()) || 'app'; } } catch(e){} return 'web'; }
+function appDonateOn(){ var d = APP_CFG && APP_CFG.donate; return !!(d && d.on && /^https:\/\//i.test(d.url || '') && (!isNative() || d.inApp)); }
+function appFeedbackOn(){ return !!(LIVE_DB && liveIsCF() && !(APP_CFG && APP_CFG.feedback && APP_CFG.feedback.on === false)); }
+function appCfgApply(){
+  var n = APP_CFG && APP_CFG.notice, el = document.getElementById('appNote');
+  if (el) el.innerHTML = (n && n.on && n.text) ? '<div class="app-note">📣 ' + esc(n.text) + '</div>' : '';
+  var html = (appDonateOn() ? '<button class="app-link gold" onclick="donateOpen()">💛 Support this app</button>' : '') +
+             (appFeedbackOn() ? '<button class="app-link" onclick="fbOpen()">💬 Send feedback</button>' : '');
+  var els = document.querySelectorAll('.app-links'); for (var i = 0; i < els.length; i++) els[i].innerHTML = html;
+}
+function appCfgLoad(){
+  appCfgApply();
+  if (!LIVE_DB || !liveIsCF()) return;
+  liveFetch('GET', '/config').then(function(r){ if (r.ok && r.data && typeof r.data === 'object'){ APP_CFG = r.data; Store.set('starport_cfg', APP_CFG); appCfgApply(); } });
+}
+function donateOpen(){
+  if (!appDonateOn()) return;
+  var d = APP_CFG.donate;
+  lvSheet('<div class="sheet-title">💛 ' + esc(d.title || 'Support Starport Fencing') + '</div>' +
+    '<div class="dn-text">' + esc(d.text || '') + '</div>' +
+    '<a class="btn btn-gold btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(d.url) + '" target="_blank" rel="noopener" onclick="return donateGo(this.href)">' + esc(d.btn || 'Donate') + '</a>' +
+    (d.note ? '<div class="lv-sub" style="text-align:center;margin-top:10px;">' + esc(d.note) + '</div>' : '') +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>');
+}
+function donateGo(u){ if (isNative()){ var B = capPlugin('Browser'); if (B && B.open){ B.open({ url:u }); return false; } } return true; }
+function fbCtx(){
+  var scr = ''; try { var v = document.querySelector('.view.on'); scr = v ? v.id : ''; } catch(e){}
+  if (document.getElementById('settingsSheet').classList.contains('on')){ closeSheet('settingsSheet'); }
+  var code = (scr === 'liveHost' && LH && LH.code) || (scr === 'liveView' && LV && LV.code) || (scr === 'scoring' && liveConn && liveConn.code) || '';
+  return { screen:scr, event:code, useEvent:!!code };
+}
+function fbOpen(){
+  if (!appFeedbackOn()){ toast('Feedback is not available right now'); return; }
+  var draft = Store.get('starport_fb_draft', {}) || {};
+  FB_CTX = fbCtx(); FB_KIND = draft.kind || 'idea';
+  lvSheet('<div class="sheet-title">💬 Send feedback</div>' +
+    '<div class="lv-sub" style="margin-top:0;">Found a problem or have an idea? It goes straight to the person who makes the app.</div>' +
+    '<div class="fb-kinds" id="fbKinds"></div>' +
+    '<textarea id="fbMsg" class="lv-textarea" rows="6" maxlength="4000" placeholder="What happened, or what would make the app better?" oninput="fbSaveDraft()">' + esc(draft.msg || '') + '</textarea>' +
+    '<div class="lv-sub">Optional, if you’d like a reply:</div>' +
+    '<input id="fbName" placeholder="Your name" maxlength="80" value="' + esc(draft.name || '') + '" oninput="fbSaveDraft()" style="margin-bottom:8px;">' +
+    '<input id="fbContact" type="email" placeholder="Email" maxlength="120" value="' + esc(draft.contact || '') + '" oninput="fbSaveDraft()">' +
+    (FB_CTX.event ? '<div class="fb-kinds" style="margin-top:10px;"><button class="fb-k on" id="fbEv" onclick="FB_CTX.useEvent=!FB_CTX.useEvent;this.className=\'fb-k\'+(FB_CTX.useEvent?\' on\':\'\')">About event ' + esc(FB_CTX.event) + '</button></div>' : '') +
+    '<div id="fbErr" class="lv-sub" style="min-height:18px;"></div>' +
+    '<div class="sheet-row" style="flex-direction:column;gap:8px;"><button class="btn btn-gold btn-block" id="fbSendBtn" onclick="fbSend()">Send</button><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Cancel</button></div>');
+  fbKinds();
+}
+function fbKinds(){
+  var el = document.getElementById('fbKinds'); if (!el) return;
+  el.innerHTML = [['idea','💡 Idea'],['problem','🐞 Problem'],['other','💬 Other']].map(function(k){
+    return '<button class="fb-k' + (FB_KIND === k[0] ? ' on' : '') + '" onclick="FB_KIND=\'' + k[0] + '\';fbKinds();fbSaveDraft()">' + k[1] + '</button>'; }).join('');
+}
+function fbVal(id){ var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; }
+function fbSaveDraft(){ Store.set('starport_fb_draft', { kind:FB_KIND, msg:fbVal('fbMsg'), name:fbVal('fbName'), contact:fbVal('fbContact') }); }
+function fbSend(){
+  var msg = fbVal('fbMsg'), err = document.getElementById('fbErr'), btn = document.getElementById('fbSendBtn');
+  if (msg.length < 2){ err.textContent = 'Please write a message first.'; return; }
+  btn.disabled = true; btn.textContent = 'Sending…'; err.textContent = '';
+  liveFetch('POST', '/feedback', { kind:FB_KIND, msg:msg, name:fbVal('fbName'), contact:fbVal('fbContact'), event:FB_CTX.useEvent ? FB_CTX.event : '', screen:FB_CTX.screen, app:LIVE_APP_VERSION, plat:appPlat() }).then(function(r){
+    if (r.ok){ Store.set('starport_fb_draft', { name:fbVal('fbName'), contact:fbVal('fbContact') }); lvSheet('<div class="sheet-title">💬 Thank you!</div><div class="lv-sub" style="margin-top:0;">Your feedback was sent.</div><div class="sheet-row"><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Close</button></div>'); return; }
+    btn.disabled = false; btn.textContent = 'Send';
+    err.textContent = (r.data && r.data.error) || (r.status ? 'Could not send (' + r.status + '). Please try again.' : 'No internet connection. Your message is kept — try again when you’re online.');
+  });
+}
+
 /* Boot: on native, restore any storage the WebView may have evicted. */
 Store.hydrateFromNative(['starport_matches','starport_settings','starport_live','starport_live_outbox','starport_live_sent','starport_device','starport_lv_recent'], function(){ loadSettings(); try { liveLoadConn(); renderLivePanel(); } catch(e){} });
 loadSettings();
@@ -7492,6 +7574,7 @@ renderWeapons();
 renderFormats();
 try { liveLoadConn(); renderLivePanel(); if (!boutHandleLink() && !lvHandleLink()) liveHandleLink(); } catch(e){ liveConn = null; }
 setTimeout(function(){ try { if (!document.getElementById('lvSheet').classList.contains('on')) autoResumeCheck(); } catch(e){} }, 400);
+try { appCfgLoad(); } catch(e){}
 </script>
 <script>
 if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) { window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); }); }
