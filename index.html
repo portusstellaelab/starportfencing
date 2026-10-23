@@ -4846,6 +4846,7 @@ function lvModel(pub, res){
              pistes:sInt(meta.pistes,1,99,1), locked:meta.locked===true, deleted:meta.deleted===true, createdAt:sInt(meta.createdAt,0,9e15,0),
              time:(/^([01]?\d|2[0-3]):[0-5]\d$/.test(String(meta.time||'')) ? String(meta.time) : ''), venue:sStr(meta.venue,80) };
   m.meta.expiresAt = sInt(meta.expiresAt,0,9e15,0) || lvExpiry(m.meta.date, m.meta.createdAt);
+  m.meta.reserves = meta.reserves === true;
   m.meta.expired = Date.now() > m.meta.expiresAt;
   var fs = (pub.fencers && typeof pub.fencers==='object') ? pub.fencers : {};
   Object.keys(fs).slice(0,500).forEach(function(k){
@@ -5209,7 +5210,7 @@ function lhPublish(after){
   LH.busy = true; lhRenderBar();
   var N = lvNonce(), pub = lhBuildPublic();
   // Patch only the host's parts, so referee results under public/results are never touched.
-  var body = { 'public/meta':pub.meta, 'public/fencers':pub.fencers, 'public/teams':pub.teams, 'public/matches':pub.matches, 'public/tr':pub.tr || null, 'public/referees':(pub.referees && pub.referees.length) ? pub.referees : null, 'public/_n':N };
+  var body = { 'public/meta':pub.meta, 'public/fencers':pub.fencers, 'public/teams':pub.teams, 'public/matches':pub.matches, 'public/tr':pub.tr || null, 'public/bracket':pub.bracket || null, 'public/referees':(pub.referees && pub.referees.length) ? pub.referees : null, 'public/_n':N };
   body['hostAuth/' + N] = { pin:LH.hostPin, at:{'.sv':'timestamp'} };
   var code = LH.code;
   liveFetch('PATCH', '/events/' + code, body).then(function(r){
@@ -5694,6 +5695,29 @@ function lhTableauHtml(m, groups){
   var rounds = groups.filter(function(g){ return g.entries; });
   if (!rounds.length) return '<div class="lv-empty">The tableau appears once Round 1 is built.</div>';
   function nm(id){ if (!id) return ''; var t = LH.d.teams[id]; if (t) return t.name; var f = LH.d.fencers[id]; return f ? f.name : ''; }
+  var pod = ''; try { pod = lvPodiumHtml(m, lhBuildPublic()); } catch(e){}
+  return lvTableauCore(m, rounds, nm, 'lhMatchActions', pod);
+}
+/* Rounds of the tableau as published (team rounds or the individual DE bracket), for viewers */
+function lvTableauRounds(pub){
+  function arr(o){ return Array.isArray(o) ? o : (o && typeof o === 'object' ? Object.keys(o).sort(function(a,b){ return a - b; }).map(function(k){ return o[k]; }) : []); }
+  var out = [], tr = pub && pub.tr, b = pub && pub.bracket;
+  if (tr && typeof tr === 'object' && tr.rounds){
+    arr(tr.rounds).forEach(function(r, i){ if (!r) return; var ps = arr(r.pairs).filter(Boolean); if (ps.some(function(p){ return p.mid; })) out.push({ label:'Round ' + (out.length + 1), sub:(r.name && r.name !== 'Round ' + (i+1)) ? sStr(r.name, 40) : '', entries:ps }); });
+  } else if (b && typeof b === 'object' && b.rounds){
+    arr(b.rounds).forEach(function(r){ if (!r) return; out.push({ label:'Round ' + (out.length + 1), sub:lhTableName(sInt(r.size,2,512,2)), entries:arr(r.entries) }); });
+  }
+  return out;
+}
+function lvTableauView(m){
+  var pub = LV.pub || {}, rounds = lvTableauRounds(pub);
+  if (!rounds.length) return '<div class="lv-empty">The tableau appears once the organiser builds the first round.</div>';
+  var tm = pub.teams || {}, fs = pub.fencers || {};
+  function nm(id){ if (!id) return ''; var t = tm[id]; if (t && t.name) return sStr(t.name, 40); var f = fs[id]; return f && f.name ? sStr(f.name, 40) : ''; }
+  var pod = ''; try { pod = lvPodiumHtml(m, pub); } catch(e){}
+  return lvTableauCore(m, rounds, nm, 'lvMatchDetail', pod);
+}
+function lvTableauCore(m, rounds, nm, clickFn, pod){
   var cols = rounds.map(function(g){
     return '<div class="tb-col"><div class="tb-h">' + esc(g.label) + (g.sub ? '<small>' + esc(g.sub) + '</small>' : '<small>&nbsp;</small>') + '</div><div class="tb-ms">' +
       g.entries.map(function(e){
@@ -5702,13 +5726,12 @@ function lhTableauHtml(m, groups){
         var wa = r && r.final && r.scoreA > r.scoreB, wb = r && r.final && r.scoreB > r.scoreA;
         var na = x ? x.teamA : nm(e.a), nb = x ? x.teamB : (e.b ? nm(e.b) : '');
         if (!e.b && !x) return '<div class="tb-m"><div class="tb-l win"><span>' + esc(na) + '</span><b>BYE</b></div></div>';
-        return '<div class="tb-m' + (x ? '' : ' tb-wait') + '"' + (x ? ' onclick="lhMatchActions(\'' + x.id + '\')"' : '') + '>' +
+        return '<div class="tb-m' + (x ? '' : ' tb-wait') + '"' + (x ? ' onclick="' + clickFn + '(\'' + x.id + '\')"' : '') + '>' +
           '<div class="tb-l' + (wa ? ' win' : (wb ? ' lose' : '')) + '"><span>' + esc(na || 'TBC') + '</span><b>' + (hs ? r.scoreA : '') + '</b></div>' +
           '<div class="tb-l' + (wb ? ' win' : (wa ? ' lose' : '')) + '"><span>' + esc(nb || 'TBC') + '</span><b>' + (hs ? r.scoreB : '') + '</b></div>' +
           (x && (x.piste || x.stage) ? '<div class="tb-p">' + [lhStageText(x.stage), x.piste ? 'Piste ' + x.piste : '', r && !r.final && hs ? 'live' : ''].filter(Boolean).join(' \u00b7 ') + '</div>' : '') + '</div>';
       }).join('') + '</div></div>';
   }).join('');
-  var pod = ''; try { pod = lvPodiumHtml(m, lhBuildPublic()); } catch(e){}
   return '<div class="tb-wrap"><div class="tb">' + cols + '</div></div>' + (pod ? '<div class="section-head">Podium</div>' + pod : '') +
     '<div class="lv-sub">Tap a match to open it. Winners are in bold.</div>';
 }
@@ -7383,6 +7406,7 @@ function lvvRender(){
   if (LV.wantCheckin){ LV.wantCheckin = false; setTimeout(function(){ lvCheckinSheet(); }, 0); }
   if (LV.me) html += lvNextBoutHtml(m, LV.me);
   var tabs = [['bouts','Bouts'],['standings','Standings']];
+  if (lvTableauRounds(LV.pub).length) tabs.splice(1, 0, ['tableau','Tableau']);
   if (m.teams.length) tabs.push(['teams','Teams']);
   if (LV.me) tabs.push(['mine','My results']);
   if (!tabs.some(function(t){ return t[0]===LV.tab; })) LV.tab = 'bouts';
@@ -7391,6 +7415,7 @@ function lvvRender(){
     if (LV.tab==='bouts') html += lvScheduleHtml(m, LV.me);
     else if (LV.tab==='standings') html += lvStandingsHtml(m);
     else if (LV.tab==='teams') html += lvTeamsViewHtml(m, LV.me);
+    else if (LV.tab==='tableau') html += lvTableauView(m);
     else html += lvMineHtml(m, LV.me);
   } catch(e){ html += '<div class="lv-empty">Some event data could not be shown.</div>'; }
   html += '<div class="lv-expiry">\u23F3 This event and its results will be deleted on ' + esc(lvExpiryText(m.meta.expiresAt)) + ' (7 days after the event).</div>' +
@@ -7746,9 +7771,11 @@ function lvStandingsHtml(m){
   return html || '<div class="lv-empty">Standings appear once results are final.</div>';
 }
 function lvTeamsViewHtml(m, me){
-  return m.teams.map(function(t){
+  var anyR = m.teams.some(function(t){ return t.members.length >= 4; });
+  return (anyR ? '<div class="lv-sub" style="margin-top:0;"><b class="lv-pos">R</b> = reserve \u00b7 ' + (m.meta.reserves ? 'reserves fence in this event (all 4 fence)' : 'reserves sit out and only come in as a substitute') + '. A match can differ \u2014 its 9-bout order shows who fences.</div>' : '') +
+    m.teams.map(function(t){
     return '<div class="lv-card"><div class="lv-team-head"><span class="lv-team-name">' + esc(t.name) + '</span><span class="lr-chip">' + t.members.length + '</span></div>' +
-      '<div class="lv-chips">' + t.members.map(function(f){ return '<span class="lv-chip' + (f.name===me?' sel':'') + '">' + (m.meta.checkin && m.checkins[f.id] ? '\u2713 ' : '') + esc(f.name) + (f.club ? ' <small>' + esc(f.club) + '</small>' : '') + '</span>'; }).join('') + '</div></div>';
+      '<div class="lv-chips">' + t.members.map(function(f, i){ return '<span class="lv-chip' + (f.name===me?' sel':'') + '">' + (i === 3 ? '<b class="lv-pos">R</b>' : '') + (m.meta.checkin && m.checkins[f.id] ? '\u2713 ' : '') + esc(f.name) + (f.club ? ' <small>' + esc(f.club) + '</small>' : '') + (i === 3 ? ' <small>reserve</small>' : '') + '</span>'; }).join('') + '</div></div>';
   }).join('');
 }
 function lvMyRows(m, me){
