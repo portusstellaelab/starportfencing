@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Starport Fencing · User guide</title>
+<style>
+:root{--bg:#0a1628;--card:#13213a;--line:#24365a;--txt:#eef3fa;--mut:#9fb0c8;--gold:#c9a227;--blue:#5aa0e8}
+@media (prefers-color-scheme: light){:root{--bg:#f3f5f8;--card:#fff;--line:#d9dee6;--txt:#0a1628;--mut:#4f5f74;--gold:#8a6d0e;--blue:#1e5fa8}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:12px}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:800px;margin:0 auto;padding:20px 16px 60px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.back{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:10px;color:var(--txt);text-decoration:none;font-size:14px}
+h1{color:var(--gold);font-size:28px;letter-spacing:.5px;margin:14px 0 2px}
+h2{font-size:21px;margin:36px 0 8px;color:var(--gold);border-top:1px solid var(--line);padding-top:22px}
+h3{font-size:17px;margin:22px 0 6px}
+p,li{margin:6px 0}
+ul,ol{padding-left:22px}
+.mut{color:var(--mut);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:14px 0}
+.toc{columns:2;column-gap:24px;padding-left:18px;margin:6px 0}
+@media (max-width:560px){.toc{columns:1}}
+.toc li{break-inside:avoid}
+a{color:var(--blue)}
+b.k{display:inline-block;padding:0 7px;border:1px solid var(--line);border-radius:6px;font-weight:600;font-size:14px;background:var(--card)}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:15px}
+th,td{text-align:left;padding:7px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em;border-top:none}
+.tip{border-left:3px solid var(--gold);padding:6px 12px;margin:10px 0;background:var(--card);border-radius:0 8px 8px 0}
+</style>
+</head>
+<body><main>
+<div class="top"><a class="back" href="./index.html">&larr; Back to the app</a><span class="mut">Updated 23 October 2026 &middot; app version 2.0</span></div>
+<h1>Starport Fencing user guide</h1>
+<p class="mut">Everything the app does, in the order you'll use it. Starport Fencing is free, with no ads and no account.</p>
+
+<div class="card"><b>Contents</b>
+<ol class="toc">
+<li><a href="#start">Getting started</a></li>
+<li><a href="#scoreboard">Scoreboard</a></li>
+<li><a href="#teamrelay">Team relays on the scoreboard</a></li>
+<li><a href="#screen">Big-screen scoreboard 📺</a></li>
+<li><a href="#host">Hosting an event</a></li>
+<li><a href="#fencers">Fencers and registration</a></li>
+<li><a href="#teams">Teams and reserves</a></li>
+<li><a href="#checkin">Check-in</a></li>
+<li><a href="#schedule">Schedule: pools, DE and rounds</a></li>
+<li><a href="#scores">Entering scores and results</a></li>
+<li><a href="#share">Share tab: QR codes and printouts</a></li>
+<li><a href="#referees">Referees</a></li>
+<li><a href="#viewers">Fencers and spectators</a></li>
+<li><a href="#problems">Fixing common problems</a></li>
+<li><a href="#more">Feedback, support and privacy</a></li>
+</ol></div>
+
+<h2 id="start">1. Getting started</h2>
+<p>The home screen has two parts:</p>
+<ul>
+<li><b>Scoreboard</b>: score a bout on this device. It works fully offline.</li>
+<li><b>Fencing Live</b>: host an event, referee it, or follow it live. It needs internet.</li>
+</ul>
+<p>Use it in a browser at <b>portusstellaelab.github.io/starportfencing</b>, add it to your home screen, or install the Android app from Google Play. Everything works the same on each.</p>
+<p>The <b>⚙</b> on the home screen holds sound, vibration and épée settings.</p>
+
+<h2 id="scoreboard">2. Scoreboard</h2>
+<h3>Setting up a bout</h3>
+<ol>
+<li>Choose the weapon (foil, épée, sabre) and format: <b>Pool</b> (5 touches, 3 minutes), <b>Veteran DE</b> (10), <b>Senior DE</b> (15, three periods) or <b>Team relay</b> (45, nine bouts).</li>
+<li>Enter both names, with country and club if you like.</li>
+<li>Tap <b class="k">Start match</b>.</li>
+</ol>
+<h3>Scoring</h3>
+<ul>
+<li>Tap a fencer's side to give them a touch. The timer pauses automatically.</li>
+<li><b>Undo</b> takes back the last touch or card for that fencer.</li>
+<li><b>Cards</b>: yellow and red (a red gives the opponent a touch), with a full-screen flash so everyone sees the call.</li>
+<li><b>Épée</b>: the double-touch button scores both fencers at once. The optional passivity timer (⚙ settings) runs a one-minute no-touch clock and prompts for P-cards (P-red then P-black from 1 Sep 2026, or the earlier P-yellow ladder if you turn it on).</li>
+<li><b>Sabre DE</b>: two halves with a break when a fencer reaches half the target, instead of timed periods.</li>
+<li><b>Video review</b>: one review per fencer per bout, kept when a call is overturned.</li>
+<li><b>⇄</b> between the names swaps the sides on screen to match where the fencers stand.</li>
+</ul>
+<h3>Timer</h3>
+<ul>
+<li>The large button starts and pauses the clock.</li>
+<li><b>Set time</b> changes the clock; <b>Reset</b> puts it back to the start of the period.</li>
+<li><b>Tie break</b> sets one minute; <b>Break</b> starts the one-minute break between periods.</li>
+</ul>
+<h3>Saving and sharing</h3>
+<ul>
+<li>When the bout ends, save it. Saved bouts keep a full timeline of every touch with the clock reading, plus your notes.</li>
+<li>Share a result card as a picture, or send the bout link to the fencers.</li>
+<li>If the phone or app closes mid-bout, the bout is saved automatically and offered again when you reopen the app.</li>
+</ul>
+
+<h2 id="teamrelay">3. Team relays on the scoreboard</h2>
+<ul>
+<li>A relay is nine bouts to 45, in the FIE order. The bout list under the timer shows every bout; tap one to review or correct it.</li>
+<li><b>⇄ Team order</b> swaps fencers within a team (for example a substitute coming in).</li>
+<li>The match total always adds up from the individual bouts.</li>
+</ul>
+
+<h2 id="screen">4. Big-screen scoreboard 📺</h2>
+<p>Turn an iPad, laptop or TV into a classic scoreboard by the piste (on the floor, or on top of the scoring lights) while the referee scores on their phone.</p>
+<ol>
+<li>On the referee's phone, open the bout in the scoreboard and tap <b class="k">📺</b> at the top, then <b>Create screen code</b>.</li>
+<li>On the screen device, scan the QR it shows, or open the app → <b>Fencing Live</b> → <b>Scoreboard screen</b> and type the 6-character code.</li>
+<li>Tap <b>Full screen</b> on the screen device.</li>
+</ol>
+<p>The screen shows names, clubs, the score, the timer, period or relay bout, cards and breaks, live. It has no buttons to press, so it's safe to leave by the piste. The phone keeps the same code for every bout it scores, so the screen stays at that piste all day. Tap <b>📺 → Stop this screen</b> when you're finished.</p>
+<div class="tip">Both devices need internet. The screen runs the clock itself between updates, so it uses very little data.</div>
+
+<h2 id="host">5. Hosting an event (Fencing Live)</h2>
+<ol>
+<li>Go to <b>Fencing Live → Create new event</b>.</li>
+<li>Choose <b>Teams</b> or <b>Individual</b>. For individual events, choose the format:
+<ul>
+<li><b>Pool</b>: round-robin pools only.</li>
+<li><b>DE</b>: a direct-elimination tableau only, seeded by skill.</li>
+<li><b>Pool + DE</b>: pools first, then a tableau seeded from the pool results. This is the usual competition format.</li>
+</ul>
+For DE, choose Senior (15) or Veteran (10).</li>
+<li>Add the date, start time, venue and weapon, then <b>Create</b>.</li>
+<li>Write down the <b>event code</b> and <b>host PIN</b> it shows you. You need them to open the event on another device.</li>
+</ol>
+<div class="tip"><b>Publish</b>: changes you make stay on your device until you tap <b class="k">⬆ Publish</b> in the bar at the top. Then fencers, referees and spectators see them.</div>
+<p>⚙ in the event opens <b>Event settings</b>: name, date, time, venue, weapon and (for individual events) the format. <b>Manage my events</b> on the Fencing Live page deletes old or test events. Every event deletes itself 7 days after its date.</p>
+
+<h2 id="fencers">6. Fencers and registration</h2>
+<h3>Adding fencers yourself</h3>
+<ul>
+<li><b>+ Add fencer</b>: name, country, club and skill level (1 beginner to 5 national level). Skill is used to make even teams and pools.</li>
+<li><b>Paste a list</b>: one fencer per line, as <i>Name, Club, Skill</i>.</li>
+</ul>
+<h3>Letting fencers and referees register themselves</h3>
+<ol>
+<li>In the <b>Share</b> tab, tap <b>Open registration</b> (or set times, below).</li>
+<li>Share the <b>Fencers &amp; viewers</b> QR or link. People tap <b>Register to fence</b> or <b>Register as referee</b> and fill in the same details you would.</li>
+<li>New registrations appear at the top of the <b>Fencers</b> tab (and the <b>Referees</b> tab for referees). Check them, then tap <b>Add</b> or <b>Add all</b>, or <b>✕</b> to remove one. Then Publish.</li>
+</ol>
+<p>Registration is closed until you open it. Each person sees on their phone when they've been added.</p>
+<h3>Scheduling registration and check-in</h3>
+<p>In the Share tab, tap <b>⏰ Set times</b> and choose when registration and check-in open and close. They open and close by themselves at those times, and the times are printed on the event info sheet. Leave a box empty to use the buttons instead. Closing by hand always wins.</p>
+
+<h2 id="teams">7. Teams and reserves</h2>
+<ul>
+<li>In the <b>Teams</b> tab, choose 3 or 4 fencers per team (or Manual) and tap <b>Build teams by skill</b>. Teams come out balanced; you can move anyone by tapping them, then <b>Move here</b> on another team.</li>
+<li>With teams of 4, the fourth fencer is the reserve (R). Choose whether reserves fence:
+<ul>
+<li><b>Substitute only</b>: fencers 1–3 fence the FIE order and the reserve only comes in as a substitute.</li>
+<li><b>All 4 fence</b>: the highest-skill fencer opens, closes and fences 3 bouts; the others fence 2 each, ordered by skill, and nobody fences two bouts in a row.</li>
+</ul></li>
+<li>Changing a team, or the reserve setting, updates every match that <b>hasn't started</b> when you Publish. Matches already started or finished keep their line-up.</li>
+<li>The same reserve switch is on the <b>Schedule</b> tab. To change just one match, open it and use <b>⇄ Change fencers</b> → <b>Reserves in this match</b>.</li>
+</ul>
+
+<h2 id="checkin">8. Check-in</h2>
+<ol>
+<li>Publish your fencers and teams first.</li>
+<li>When doors open, tap <b>Open check-in</b> in the Share tab (or let your scheduled time open it).</li>
+<li>Fencers scan the <b>Fencers &amp; viewers</b> QR and tap their name. You see arrivals live in the Fencers tab; tap a name to check someone in by hand.</li>
+<li>Close check-in, then tap <b>See no-shows</b>. Mark them absent: they're taken out of their teams and draws. Adjust the teams, rebuild the draw if needed, and Publish.</li>
+</ol>
+
+<h2 id="schedule">9. Schedule: pools, DE and rounds</h2>
+<h3>Individual events</h3>
+<ul>
+<li><b>⚡ Generate pools</b>: choose the number of pools; fencers are spread by skill, bouts are to 5 in the FIE order, one pool per piste.</li>
+<li><b>⚡ Build Round 1</b> (DE): builds the tableau. In Pool + DE events it's seeded from the pool results (wins ÷ bouts, then indicator, then touches scored). Wait until every pool bout is finished; the app warns you if some aren't.</li>
+<li>Press the round button again as results come in to add the next round, up to the final.</li>
+</ul>
+<h3>Team events</h3>
+<ul>
+<li><b>⚡ Build Round 1</b> suggests the pairings; everything is editable. Byes go to the top seeds.</li>
+<li>Build each next round when results are in. <b>🏆 Podium</b> sets gold, silver and bronze.</li>
+</ul>
+<h3>Working with matches</h3>
+<ul>
+<li><b>⇆ Spread over pistes</b> spreads a round across your pistes so nobody fences twice in a row.</li>
+<li><b>+ Add match by hand</b> for anything extra, including Final and Bronze.</li>
+<li>Tap any match to choose: <b>Use the built-in scoreboard on this device</b>, <b>Enter the score</b> (when the venue has its own scoreboard or a paper sheet), <b>Change fencers</b> (teams) or <b>Edit match</b>.</li>
+<li><b>Show the 9-bout order</b> lists who fences each relay bout.</li>
+<li><b>↺ Reset generated draw</b> removes generated matches that have no results.</li>
+</ul>
+
+<h2 id="scores">10. Entering scores and results</h2>
+<ul>
+<li>Scores reach the standings the moment they're entered, from the built-in scoreboard, a referee's phone or the host's score sheet, so you can build the next round straight away.</li>
+<li><b>Score sheet</b>: for relays, type each bout's touches; the running relay score is worked out for you. Set the status to <b>Final</b> when the match is over.</li>
+<li><b>Results</b> tab: standings, with ties shown as "3=". Tap a match to correct it.</li>
+<li>A match stuck <b>In progress</b> (opened by mistake)? Tap it and choose <b>↺ Not started — back to upcoming</b>, or <b>🔓 Unlock</b> to keep the score and let another referee carry on.</li>
+<li><b>Lock</b> the results when the event is over so nobody can change them.</li>
+<li>Share or print results as a picture or PDF, with or without the bout details.</li>
+</ul>
+
+<h2 id="share">11. Share tab: QR codes and printouts</h2>
+<ul>
+<li><b>Registration</b> and <b>Check-in</b> cards with their open/close buttons and times.</li>
+<li>Three QR codes:
+<ul>
+<li><b>Fencers &amp; viewers</b>: follow live, register, check in.</li>
+<li><b>Referees</b>: opens the referee screen with the PIN filled in. Only show it to referees.</li>
+<li><b>Host</b>: opens the event with full control on a committee member's phone. Keep it private.</li>
+</ul></li>
+<li><b>Print</b>: event info (with the QR, registration and check-in times), check-in sheet, teams, bout schedule, results, referee card and host card. Each prints as a PDF across as many pages as it needs.</li>
+</ul>
+
+<h2 id="referees">12. Referees</h2>
+<ol>
+<li>Scan the <b>Referees</b> QR (or use the event code and referee PIN) and pick your name. If you registered, your name is in the list.</li>
+<li>Tap your bout. Choose <b>Referee with the built-in scoreboard</b>, or <b>Enter the score</b> if the venue has its own scoreboard or a paper sheet.</li>
+<li>While you score, the bout is locked to you so nobody else scores it at the same time.</li>
+<li>Need to swap? Tap <b>🤝 Hand over</b>: the score so far is uploaded and the next referee carries on from it.</li>
+<li>Opened the wrong bout? Go back and choose not to save. If nothing was scored, the bout goes back to upcoming and is unlocked.</li>
+<li>Teams: <b>⇄ Change fencers</b> on the day if a team changes its order or brings in a substitute.</li>
+</ol>
+
+<h2 id="viewers">13. Fencers and spectators</h2>
+<ul>
+<li>Scan the event QR, or go to Fencing Live and enter the event code. No login.</li>
+<li><b>Find me</b> highlights your bouts and shows your next one; star your team in the standings.</li>
+<li><b>Register to fence</b> while registration is open, and <b>Check in</b> when you arrive.</li>
+<li>Follow live scores, the schedule, standings and the tableau. Turn the 9-bout details on or off.</li>
+</ul>
+
+<h2 id="problems">14. Fixing common problems</h2>
+<table>
+<tr><th>Problem</th><th>What to do</th></tr>
+<tr><td>Viewers don't see my changes</td><td>Tap <b>⬆ Publish</b>. The bar says "Everyone sees the latest version" when it's done.</td></tr>
+<tr><td>A match says In progress but nobody's fencing</td><td>Host: tap it → <b>Not started — back to upcoming</b>.</td></tr>
+<tr><td>A referee is locked out ("someone is refereeing this bout")</td><td>Ask them to tap <b>🤝 Hand over</b>, or the host unlocks it from the match.</td></tr>
+<tr><td>A fencer didn't come</td><td>Mark them absent (Fencers tab), move people between teams, then Publish. Matches not yet started update.</td></tr>
+<tr><td>Registration form says it's closed</td><td>Check the times under ⏰ Set times; a close time ends registration even if you opened it.</td></tr>
+<tr><td>Lost the host PIN</td><td>Open the event on the device that created it (Fencing Live → Open my event), or contact us.</td></tr>
+<tr><td>No internet at the venue</td><td>The Scoreboard works offline. Fencing Live needs internet; scores are kept on the phone and sent when it's back.</td></tr>
+</table>
+
+<h2 id="more">15. Feedback, support and privacy</h2>
+<ul>
+<li><b>💬 Send feedback</b> (home screen, Fencing Live, ⚙ settings) goes straight to the developer. Ideas and problems are welcome.</li>
+<li>Starport Fencing is free. <b>💛 Support our athletes</b> on the website explains the cause and how to donate.</li>
+<li><a href="./privacy.html">Privacy policy</a> &middot; Contact: <a href="mailto:portusstellaelab@gmail.com">portusstellaelab@gmail.com</a></li>
+</ul>
+<p class="mut">© 2026 Portus Stellae Lab. All rights reserved.</p>
+</main></body>
+</html>

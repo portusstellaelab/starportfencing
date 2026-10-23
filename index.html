@@ -352,6 +352,35 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .lt-medals button{width:30px;height:30px;border-radius:7px;font-size:16px;opacity:.25;filter:grayscale(1);}
 .lt-medals button.on{opacity:1;filter:none;background:rgba(201,162,39,.2);}
 .lt-row.medal-g{background:rgba(201,162,39,.16);} .lt-row.medal-s{background:rgba(200,200,210,.10);} .lt-row.medal-b{background:rgba(205,127,50,.14);}
+/* big-screen scoreboard (📺 display) */
+#displayView{padding:0;background:#05090f;overflow:hidden;}
+.dv{position:fixed;inset:0;display:flex;flex-direction:column;background:#05090f;color:var(--white);padding:2.2vh 3vw 2vh;user-select:none;}
+.dv-top{display:flex;justify-content:space-between;align-items:center;font-size:2.4vh;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;}
+.dv-top b{color:var(--gold);font-weight:600;}
+.dv-names{display:flex;justify-content:space-between;gap:4vw;margin-top:1.5vh;}
+.dv-name{flex:1;font-family:'Bebas Neue',sans-serif;font-size:min(7vw,9vh);line-height:1;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dv-name.right{text-align:right;}
+.dv-name small{display:block;font-family:'DM Sans',sans-serif;font-size:min(2.2vw,2.8vh);color:var(--muted);letter-spacing:0;margin-top:.6vh;}
+.dv-name.col-a,.dv-score.col-a{color:var(--gold);} .dv-name.col-b,.dv-score.col-b{color:var(--blue2);}
+.dv-main{flex:1;display:flex;align-items:center;justify-content:space-between;min-height:0;}
+.dv-score{flex:1;font-family:'Bebas Neue',sans-serif;font-size:min(30vw,52vh);line-height:.85;text-align:center;}
+.dv-mid{flex:0 0 32vw;text-align:center;}
+.dv-clock{font-family:'DM Mono',ui-monospace,monospace;font-size:min(11vw,19vh);line-height:1;font-weight:600;}
+.dv-clock.run{color:#4cd37b;} .dv-clock.crit{color:var(--red2);}
+.dv-state{font-size:min(2.6vw,3.4vh);letter-spacing:.12em;color:var(--muted);margin-top:1vh;text-transform:uppercase;}
+.dv-period{font-size:min(3vw,4vh);margin-top:1.2vh;color:var(--white);}
+.dv-cards{display:flex;justify-content:space-between;font-size:min(4vw,6vh);min-height:7vh;padding:0 4vw;}
+.dv-relay{text-align:center;font-size:min(3.2vw,4.5vh);margin-top:.5vh;}
+.dv-relay b{font-family:'Bebas Neue',sans-serif;font-size:1.3em;margin:0 1.2vw;color:var(--white);}
+.dv-brk{position:absolute;inset:0;background:rgba(5,9,15,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:min(4vw,5vh);letter-spacing:.1em;}
+.dv-brk .dv-clock{font-size:min(16vw,26vh);color:var(--gold);}
+.dv-win{position:absolute;left:0;right:0;bottom:16vh;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:min(6vw,8vh);color:var(--gold);}
+.dv-idle{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2vh;font-size:min(3vw,4vh);color:var(--muted);}
+.dv-idle b{font-family:'Bebas Neue',sans-serif;font-size:min(9vw,12vh);color:var(--gold);letter-spacing:.04em;}
+.dv-foot{position:absolute;right:1.5vw;bottom:1.2vh;display:flex;gap:8px;align-items:center;opacity:.35;transition:opacity .2s;}
+.dv:hover .dv-foot,.dv-foot:focus-within{opacity:1;}
+.dv-foot button{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;cursor:pointer;}
+.dv-foot span{font-size:12px;color:var(--muted);}
 .app-note{background:rgba(201,162,39,.14);border:1px solid rgba(201,162,39,.45);color:var(--white);border-radius:12px;padding:10px 12px;margin-top:16px;font-size:14px;line-height:1.45;white-space:pre-wrap;}
 .app-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:22px;}
 .app-links:empty{display:none;}
@@ -709,6 +738,11 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
     <div class="live-actions" style="margin:0;"><button class="btn btn-gold" onclick="lhCreateSheet()">Create new event</button><button class="btn btn-ghost" onclick="lhOpenSheet()">Open my event</button></div>
     <button class="btn btn-ghost btn-block" style="margin-top:8px;" onclick="lhManageSheet()">&#129529; Manage my events (delete old or test events)</button>
   </div>
+  <div class="lv-card">
+    <div class="lv-team-name" style="margin-bottom:8px;">&#128250; Scoreboard screen</div>
+    <div class="lv-sub" style="margin-top:0;">Turn an iPad, laptop or TV into a big scoreboard for a piste. The referee taps &#128250; on their scoreboard and you enter the code here (or scan its QR).</div>
+    <div style="display:flex;gap:8px;"><input id="dvCodeIn" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Screen code"><button class="btn btn-gold" onclick="dispOpenFromInput()">Show</button></div>
+  </div>
   <div id="lvRecent"></div>
   <div class="app-links"></div>
 </section>
@@ -725,6 +759,8 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
   <div id="lvvBody"></div>
   <div class="app-links" style="margin-bottom:10px;"></div>
 </section>
+
+<section class="view" id="displayView"><div class="dv" id="dvRoot"></div></section>
 
 <section class="view" id="setup">
   <div class="setup-head">
@@ -799,6 +835,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
   <div class="sc-header">
     <button class="btn btn-ghost btn-sm" onclick="confirmExit()">&larr; Back</button>
     <span id="matchLabelTag" style="flex:1;text-align:center;"></span>
+    <button class="btn btn-ghost btn-sm" id="dispBtn" style="margin-right:6px;padding:5px 9px;" onclick="dispSheet()" aria-label="Show on a big screen">&#128250;</button>
     <span class="badge badge-gold" id="statusBadge">LIVE</span>
   </div>
 
@@ -4786,6 +4823,21 @@ function lvPisteCmp(m){
   };
 }
 function lvOnPiste(m, p){ return m.matches.filter(function(x){ return x.piste === p; }).sort(lvPisteCmp(m)); }
+/* 'open' | 'closed' | '' (not open yet) for a check-in or registration window */
+function lvWinOpen(state, from, to, now){
+  now = now || Date.now();
+  if (state === 'closed') return false;
+  if (to && now >= to) return false;
+  if (state === 'open') return true;
+  return !!(from && now >= from);
+}
+function lvWinState(state, from, to){ if (lvWinOpen(state, from, to)) return 'open'; if (state === 'closed' || (to && Date.now() >= to) || state === 'open') return 'closed'; return ''; }
+function lvCleanReg(k, g){
+  if (!g || typeof g !== 'object' || (g.kind !== 'fencer' && g.kind !== 'referee')) return null;
+  var name = sStr(g.name, 40); if (name.length < 2) return null;
+  return { id:sId(k), kind:g.kind, name:name, club:sStr(g.club,40), country:sCountry(g.country), skill:sInt(g.skill,1,5,3), at:sInt(g.at,0,9e15,0), device:sStr(g.device,40) };
+}
+function lvWhen(ms){ try { return new Date(ms).toLocaleString('en-AU',{ weekday:'short', day:'numeric', month:'short', hour:'numeric', minute:'2-digit' }); } catch(e){ return ''; } }
 function lvModel(pub, res){
   var m = { meta:null, fencers:[], fmap:{}, teams:[], matches:[], results:{} };
   if (!pub || typeof pub!=='object' || !pub.meta || typeof pub.meta!=='object') return m;
@@ -4817,7 +4869,14 @@ function lvModel(pub, res){
   m.claims = {};
   if (pub.claims && typeof pub.claims === 'object') Object.keys(pub.claims).forEach(function(k){ var c = liveCleanClaim(pub.claims[k]); if (c) m.claims[sId(k)] = c; });
   if (res && typeof res==='object') Object.keys(res).forEach(function(k){ var r = lvCleanResult(res[k]); if (r) m.results[sId(k)] = r; });
-  m.meta.checkin = (meta.checkin === 'open' || meta.checkin === 'closed') ? meta.checkin : '';
+  // windows: open by the host, or by their scheduled time; a close time ends them (same rule as the server)
+  function tms(v){ return (typeof v === 'number' && v > 0 && v < 9e15) ? v : 0; }
+  m.meta.ciFrom = tms(meta.ciFrom); m.meta.ciTo = tms(meta.ciTo); m.meta.regFrom = tms(meta.regFrom); m.meta.regTo = tms(meta.regTo);
+  m.meta.checkin = lvWinState(meta.checkin, m.meta.ciFrom, m.meta.ciTo);
+  m.meta.reg = lvWinState(meta.reg, m.meta.regFrom, m.meta.regTo);
+  m.regs = [];
+  if (pub.regs && typeof pub.regs === 'object') Object.keys(pub.regs).slice(0,400).forEach(function(k){ var g = lvCleanReg(k, pub.regs[k]); if (g) m.regs.push(g); });
+  m.regs.sort(function(a,b){ return a.at - b.at; });
   m.checkins = {};
   var ci = (pub.checkins && typeof pub.checkins==='object') ? pub.checkins : {};
   Object.keys(ci).slice(0,600).forEach(function(k){ var c = ci[k]; if (c && typeof c==='object' && m.fmap[sId(k)]) m.checkins[sId(k)] = { at:sInt(c.at,0,9e15,0), name:sStr(c.name,60) }; });
@@ -5095,7 +5154,7 @@ function lhOpen(){
   setTimeout(lhEnsureRefPin, 300);
   if (LH.stream) LH.stream.close();
   LH.stream = lvStream('/events/' + LH.code + '/public', function(tree){
-    if (!LH) return; LH.results = (tree && tree.results) || {}; LH.checkins = (tree && tree.checkins) || {}; LH.pubF = (tree && tree.fencers) || {}; LH.pubM = (tree && tree.matches) || {}; LH.orders = (tree && tree.orders) || null; LH.claims = (tree && tree.claims) || null; LH.pub = {}; if (tree && tree.matches) Object.keys(tree.matches).forEach(function(k){ LH.pub[k] = 1; }); lhScheduleRender();
+    if (!LH) return; LH.results = (tree && tree.results) || {}; LH.checkins = (tree && tree.checkins) || {}; LH.pubF = (tree && tree.fencers) || {}; LH.pubM = (tree && tree.matches) || {}; LH.orders = (tree && tree.orders) || null; LH.regs = (tree && tree.regs) || {}; LH.claims = (tree && tree.claims) || null; LH.pub = {}; if (tree && tree.matches) Object.keys(tree.matches).forEach(function(k){ LH.pub[k] = 1; }); lhScheduleRender();
   }, function(st){ if (LH){ LH.net = st; lhRenderBar(); } });
   lhRender();
 }
@@ -5201,8 +5260,9 @@ function lhStars(n){ var s = ''; for (var i=1;i<=5;i++) s += i<=n ? '★' : '☆
 function lhFencersHtml(){
   var d = LH.d, ids = Object.keys(d.fencers).sort(function(a,b){ return d.fencers[a].name.localeCompare(d.fencers[b].name); });
   var html = '<div class="live-actions" style="margin:0 0 10px;"><button class="btn btn-gold" onclick="lhFencerSheet()">+ Add fencer</button><button class="btn btn-ghost" onclick="lhPasteSheet()">Paste a list</button></div>';
-  if (!ids.length) return html + '<div class="lv-empty">No fencers yet. Add them one by one, or paste a list.</div>';
-  var ci = LH.checkins || {}, st = d.meta.checkin || '';
+  html += lhRegInbox('fencer');
+  if (!ids.length) return html + '<div class="lv-empty">No fencers yet. Add them one by one, paste a list, or open registration (Share tab) so fencers add themselves.</div>';
+  var ci = LH.checkins || {}, st = lvWinState(d.meta.checkin, d.meta.ciFrom, d.meta.ciTo);
   var present = ids.filter(function(id){ return !d.fencers[id].absent; }), here = present.filter(function(id){ return ci[id]; });
   if (st){
     var flt = LH.ciFilter || 'all';
@@ -5600,7 +5660,7 @@ function lhBoutsHtml(){
     if (!list.length) return;
     html += '<div class="section-head">' + (p ? 'Piste ' + p : 'No piste yet') + '</div>';
     list.forEach(function(x, i){
-      html += '<div class="lh-bout">' + lvMatchRow(m, x, null, ' onclick="lhBoutSheet(\'' + x.id + '\')"') + '</div>';
+      html += '<div class="lh-bout">' + lvMatchRow(m, x, null, ' onclick="lhMatchActions(\'' + x.id + '\')"') + '</div>';
       if (x.fmt === 'team') html += lvRelayDetails(m, x, LH.showOrders !== false, 'lhOrderSheet');
     });
   });
@@ -5642,7 +5702,7 @@ function lhTableauHtml(m, groups){
         var wa = r && r.final && r.scoreA > r.scoreB, wb = r && r.final && r.scoreB > r.scoreA;
         var na = x ? x.teamA : nm(e.a), nb = x ? x.teamB : (e.b ? nm(e.b) : '');
         if (!e.b && !x) return '<div class="tb-m"><div class="tb-l win"><span>' + esc(na) + '</span><b>BYE</b></div></div>';
-        return '<div class="tb-m' + (x ? '' : ' tb-wait') + '"' + (x ? ' onclick="lhBoutSheet(\'' + x.id + '\')"' : '') + '>' +
+        return '<div class="tb-m' + (x ? '' : ' tb-wait') + '"' + (x ? ' onclick="lhMatchActions(\'' + x.id + '\')"' : '') + '>' +
           '<div class="tb-l' + (wa ? ' win' : (wb ? ' lose' : '')) + '"><span>' + esc(na || 'TBC') + '</span><b>' + (hs ? r.scoreA : '') + '</b></div>' +
           '<div class="tb-l' + (wb ? ' win' : (wa ? ' lose' : '')) + '"><span>' + esc(nb || 'TBC') + '</span><b>' + (hs ? r.scoreB : '') + '</b></div>' +
           (x && (x.piste || x.stage) ? '<div class="tb-p">' + [lhStageText(x.stage), x.piste ? 'Piste ' + x.piste : '', r && !r.final && hs ? 'live' : ''].filter(Boolean).join(' \u00b7 ') + '</div>' : '') + '</div>';
@@ -6471,6 +6531,31 @@ function lhToggleLock(){
   LH.dirty = true;
   lhPublish();
 }
+/* Tapping a match on the host's schedule: score it here, type in a score, or edit it */
+function lhMatchActions(id){
+  var m = lhModel(), x = lvFindMatch(m, id); if (!x){ lhBoutSheet(id); return; }
+  var onLive = LH.pub && LH.pub[id] && !LH.dirty, r = m.results[id], closed = lvClosed(m, x);
+  var st = lvMatchStatus(m, x);
+  lvSheet('<div class="sheet-title">' + esc(x.teamA || 'TBC') + ' v ' + esc(x.teamB || 'TBC') + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">' + esc([x.round, x.piste ? 'Piste ' + x.piste : '', st.txt + (st.r && st.r.hasScore ? ' ' + st.r.scoreA + '\u2013' + st.r.scoreB : '')].filter(Boolean).join(' \u00b7 ')) + '</div>' +
+    (onLive ? '' : '<div class="live-banner">Publish first \u2014 the latest version of this match isn\u2019t on Fencing Live yet.</div>') +
+    '<div class="sheet-row" style="flex-direction:column;gap:8px;">' +
+      '<button class="btn btn-gold btn-block" ' + (onLive ? '' : 'disabled') + ' onclick="lhScoreHere(\'' + id + '\')">\u2694 Use the built-in scoreboard on this device</button>' +
+      '<button class="btn btn-ghost btn-block" ' + (onLive ? '' : 'disabled') + ' onclick="lvCloseSheet();lhResultSheet(\'' + id + '\')">\uD83D\uDCDD Enter the score (venue\u2019s own scoreboard or paper sheet)</button>' +
+      (x.fmt === 'team' && x.relay && !closed ? '<button class="btn btn-ghost btn-block" onclick="lvCloseSheet();lhOrderSheet(\'' + id + '\')">\u21C4 Change fencers / bout order</button>' : '') +
+      '<button class="btn btn-ghost btn-block" onclick="lvCloseSheet();lhBoutSheet(\'' + id + '\')">\u270E Edit match (fencers, piste, round, time)</button>' +
+      '<button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>' +
+    '<div class="lv-sub">Entered scores update the standings straight away, so you can build the next round.</div>');
+}
+function lhScoreHere(id){
+  var pub = lhBuildPublic(); pub.results = LH.results || {}; pub.claims = LH.claims || null; pub.orders = LH.orders || null;
+  var ev = liveCleanEvent(pub); if (!ev){ toast('Could not open this match'); return; }
+  function go(){
+    liveConn = { code:LH.code, pin:LH.hostPin, ref:(liveConn && liveConn.code === LH.code && liveConn.ref) || Store.get('starport_refname','') || 'Host', eventName:ev.name, weapon:ev.weapon, pistes:ev.pistes, matches:ev.matches, fetchedAt:Date.now() };
+    liveSaveConn(); lvCloseSheet(); goScoreboard(); liveLoadMatch(id);
+  }
+  if (liveConn && liveConn.code && liveConn.code !== LH.code) askConfirm('This device is linked to another event as a referee. Switch it to ' + LH.d.meta.name + '?', go); else go();
+}
 function lhResultSheet(id){
   var x = LH.d.matches[id]; if (!x){ lvCloseSheet(); return; }
   var known = LH.pub && Object.keys(LH.pub).length;
@@ -6545,11 +6630,88 @@ function lhReleaseLock(id){
 }
 
 /* ---------- share ---------- */
+function lhRegList(kind){ var out = []; Object.keys(LH.regs || {}).forEach(function(k){ var g = lvCleanReg(k, LH.regs[k]); if (g && (!kind || g.kind === kind)) out.push(g); }); return out.sort(function(a,b){ return a.at - b.at; }); }
+function lhRegCard(){
+  var mt = LH.d.meta, st = lvWinState(mt.reg, mt.regFrom, mt.regTo), n = lhRegList().length;
+  var h = '<div class="lv-card"><div class="lv-team-head"><span class="lv-team-name">\uD83D\uDCDD Registration \u00b7 ' + (st === 'open' ? '<span style="color:#4cd37b;">open</span>' : (st === 'closed' ? 'closed' : 'not open')) + '</span>' +
+    (n ? '<span class="lr-chip wait">' + n + ' new</span>' : '') + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">Fencers and referees register themselves from the Fencers &amp; viewers QR or link, with the same details you would enter. New registrations appear in the Fencers and Referees tabs for you to add.' +
+    (mt.regFrom || mt.regTo ? ' <b>' + [mt.regFrom ? 'Opens ' + esc(lvWhen(mt.regFrom)) : '', mt.regTo ? 'closes ' + esc(lvWhen(mt.regTo)) : ''].filter(Boolean).join(', ') + '.</b>' : '') + '</div>' +
+    '<div class="live-actions" style="margin:6px 0 0;">' + (st === 'open' ? '<button class="btn btn-ghost" onclick="lhSetReg(\'closed\')">Close registration</button>' : '<button class="btn btn-gold" onclick="lhSetReg(\'open\')">Open registration</button>') +
+    '<button class="btn btn-ghost" onclick="lhTimesSheet()">\u23F0 Set times</button></div>';
+  return h + '</div>';
+}
+function lhSetReg(st){
+  var mt = LH.d.meta, msg = st === 'open' ? 'Open registration now? Anyone with the event link can register as a fencer or referee.' : 'Close registration? Nobody else can register; you can still add people yourself.';
+  if (LH.dirty) msg += ' This also publishes your other unpublished changes.';
+  askConfirm(msg, function(){
+    mt.reg = st; if (st === 'open' && mt.regTo && mt.regTo <= Date.now()) delete mt.regTo;
+    LH.dirty = true;
+    lhPublish(function(){ toast(st === 'open' ? '\uD83D\uDCDD Registration is open \u2014 share the Fencers & viewers QR' : 'Registration closed'); });
+  });
+}
+function lhDtVal(ms){ if (!ms) return ''; var d = new Date(ms), p = function(n){ return String(n).padStart(2,'0'); }; return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+function lhDtRead(id){ var v = lvVal(id); if (!v) return 0; var t = new Date(v).getTime(); return isNaN(t) ? 0 : t; }
+function lhTimesSheet(){
+  var mt = LH.d.meta;
+  function row(lbl, a, b, va, vb){ return '<label style="margin-top:10px;">' + lbl + '</label><div style="display:flex;gap:8px;"><div style="flex:1;"><div class="lv-sub" style="margin:0 0 2px;">Opens</div><input id="' + a + '" type="datetime-local" value="' + lhDtVal(va) + '"></div><div style="flex:1;"><div class="lv-sub" style="margin:0 0 2px;">Closes</div><input id="' + b + '" type="datetime-local" value="' + lhDtVal(vb) + '"></div></div>'; }
+  lvSheet('<div class="sheet-title">\u23F0 Registration &amp; check-in times</div>' +
+    '<div class="lv-sub" style="margin-top:0;">They open and close by themselves at these times, and the times are printed on the event info sheet. Leave a box empty to open or close it yourself with the buttons. Closing by hand always wins.</div>' +
+    row('\uD83D\uDCDD Registration', 'tmRf', 'tmRt', mt.regFrom, mt.regTo) + row('\uD83D\uDCCD Check-in (on the day)', 'tmCf', 'tmCt', mt.ciFrom, mt.ciTo) +
+    '<div id="tmMsg" class="lv-sub" style="min-height:18px;"></div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Cancel</button><button class="btn btn-gold btn-block" onclick="lhTimesSave()">Save &amp; publish</button></div>');
+}
+function lhTimesSave(){
+  var mt = LH.d.meta, rf = lhDtRead('tmRf'), rt = lhDtRead('tmRt'), cf = lhDtRead('tmCf'), ct = lhDtRead('tmCt'), msg = document.getElementById('tmMsg');
+  if ((rf && rt && rt <= rf) || (cf && ct && ct <= cf)){ msg.textContent = 'A closing time must be after its opening time.'; return; }
+  function set(k, v){ if (v) mt[k] = v; else delete mt[k]; }
+  set('regFrom', rf); set('regTo', rt); set('ciFrom', cf); set('ciTo', ct);
+  // a scheduled window that hasn't started yet shouldn't be blocked by an earlier "closed"
+  if (rf && rf > Date.now() && mt.reg === 'closed') delete mt.reg;
+  if (cf && cf > Date.now() && mt.checkin === 'closed') mt.checkin = '';
+  LH.dirty = true; lvCloseSheet();
+  lhPublish(function(){ toast('\u23F0 Times saved'); });
+}
+function lhRegAdd(ids, kind){
+  var regs = lhRegList(kind), d = LH.d, added = 0, dup = 0, N = lvNonce(), body = { 'public/_n':N };
+  regs.forEach(function(g){
+    if (ids && ids.indexOf(g.id) < 0) return;
+    if (g.kind === 'fencer'){
+      var exists = Object.keys(d.fencers).some(function(f){ return d.fencers[f].name.toLowerCase() === g.name.toLowerCase(); });
+      if (exists) dup++; else { d.fencers[lvId('f')] = { name:g.name, club:g.club || '', country:g.country || '', skill:g.skill || 3 }; added++; }
+    } else {
+      var list = Array.isArray(d.referees) ? d.referees : [];
+      if (list.indexOf(g.name) >= 0) dup++; else { list.push(g.name); d.referees = list.sort(function(a,b){ return a.localeCompare(b); }); added++; }
+    }
+    body['public/regs/' + g.id] = null;
+  });
+  if (Object.keys(body).length < 2) return;
+  body['hostAuth/' + N] = { pin:LH.hostPin, at:{'.sv':'timestamp'} };
+  lhDirty();
+  liveFetch('PATCH', '/events/' + LH.code, body).then(function(r){ if (r.ok){ (ids || regs.map(function(g){ return g.id; })).forEach(function(i){ delete LH.regs[i]; }); lhRender(); } });
+  toast(added + ' added' + (dup ? ', ' + dup + ' already in the list' : '') + ' \u2014 tap Publish');
+}
+function lhRegDrop(id){
+  askConfirm('Remove this registration without adding them?', function(){
+    var N = lvNonce(), body = { 'public/_n':N }; body['public/regs/' + id] = null; body['hostAuth/' + N] = { pin:LH.hostPin, at:{'.sv':'timestamp'} };
+    liveFetch('PATCH', '/events/' + LH.code, body).then(function(r){ if (r.ok){ delete LH.regs[id]; lhRender(); } else toast('Not removed (' + liveReason(r) + ')'); });
+  });
+}
+function lhRegInbox(kind){
+  var list = lhRegList(kind); if (!list.length) return '';
+  var cname = function(c){ return c ? ' \u00b7 ' + c : ''; };
+  return '<div class="lv-card" style="border-color:rgba(201,162,39,.55);"><div class="lv-team-head"><span class="lv-team-name">\uD83D\uDCDD ' + list.length + ' new ' + (kind === 'fencer' ? 'fencer' : 'referee') + ' registration' + (list.length > 1 ? 's' : '') + '</span>' +
+    '<button class="btn btn-gold btn-sm" onclick="lhRegAdd(null,\'' + kind + '\')">Add all</button></div>' +
+    list.map(function(g){ return '<div class="live-row"><div class="lr-main"><div class="lr-names">' + esc(g.name) + '</div><div class="lr-meta">' + esc((kind === 'fencer' ? 'Skill ' + g.skill + cname(g.club) + cname(g.country) : (g.club || 'Referee'))) + ' \u00b7 ' + esc(lvWhen(g.at)) + '</div></div>' +
+      '<button class="btn btn-gold btn-sm" onclick="lhRegAdd([\'' + g.id + '\'])">Add</button><button class="btn btn-ghost btn-sm" style="margin-left:4px;" onclick="lhRegDrop(\'' + g.id + '\')">\u2715</button></div>'; }).join('') +
+    '<div class="lv-sub">Check the details, then Add. You can edit anyone afterwards.</div></div>';
+}
 function lhCheckinCard(){
-  var st = LH.d.meta.checkin || '', ci = LH.checkins || {}, d = LH.d;
+  var st = lvWinState(LH.d.meta.checkin, LH.d.meta.ciFrom, LH.d.meta.ciTo), ci = LH.checkins || {}, d = LH.d;
   var present = Object.keys(d.fencers).filter(function(id){ return !d.fencers[id].absent; }), here = present.filter(function(id){ return ci[id]; }).length;
   var h = '<div class="lv-card"><div class="lv-team-head"><span class="lv-team-name">📍 Check-in · ' + (st==='open' ? '<span style="color:#4cd37b;">open</span>' : (st==='closed' ? 'closed' : 'not started')) + '</span>' +
     (st ? '<span class="lr-chip">' + here + '/' + present.length + ' here</span>' : '') + '</div>';
+  if (d.meta.ciFrom || d.meta.ciTo) h += '<div class="lv-sub" style="margin-top:0;"><b>' + [d.meta.ciFrom ? 'Opens ' + esc(lvWhen(d.meta.ciFrom)) : '', d.meta.ciTo ? 'closes ' + esc(lvWhen(d.meta.ciTo)) : ''].filter(Boolean).join(', ') + '</b> \u00b7 <button class="link" style="color:var(--gold);" onclick="lhTimesSheet()">change</button></div>';
   if (!st) h += '<div class="lv-sub" style="margin-top:0;">Publish your fencer list and teams first (everyone assumed to come). Open check-in when doors open: fencers scan the same Fencers &amp; viewers QR, tap their name, and then see the event as themselves.</div>' +
     '<button class="btn btn-gold btn-block" onclick="lhSetCheckin(\'open\')">Open check-in</button>';
   else if (st === 'open') h += '<div class="lv-sub" style="margin-top:0;">Fencers scan the <b>Fencers &amp; viewers</b> QR below and tap their name. Follow arrivals live in the Fencers tab; tap a name there to check someone in by hand.</div>' +
@@ -6561,7 +6723,7 @@ function lhSetCheckin(st){
   var msg = st === 'open' ? 'Open check-in now?' : 'Close check-in? Fencers can no longer check themselves in; you can still do it for them.';
   if (LH.dirty) msg += ' This also publishes your other unpublished changes.';
   askConfirm(msg, function(){
-    LH.d.meta.checkin = st; LH.dirty = true;
+    LH.d.meta.checkin = st; if (st === 'open' && LH.d.meta.ciTo && LH.d.meta.ciTo <= Date.now()) delete LH.d.meta.ciTo; LH.dirty = true;
     lhPublish(function(){
       if (st === 'open'){ LH.qrKind = 'view'; LH.tab = 'share'; lhRender(); toast('📍 Check-in is open — fencers scan the Fencers & viewers QR'); }
       else toast('Check-in closed — see who did not come in the Fencers tab');
@@ -6670,6 +6832,8 @@ function lhPrint(kind){
         '<table class="pv-t"><tr><th>Fencers</th><td>' + m.fencers.filter(function(f){ return !f.absent; }).length + '</td></tr>' +
         (m.teams.length ? '<tr><th>Teams</th><td>' + m.teams.length + '</td></tr>' : '') +
         '<tr><th>Bouts</th><td>' + m.matches.length + '</td></tr>' +
+        (LH.d.meta.regFrom || LH.d.meta.regTo ? '<tr><th>Registration</th><td>' + pvEsc([LH.d.meta.regFrom ? 'opens ' + lvWhen(LH.d.meta.regFrom) : '', LH.d.meta.regTo ? 'closes ' + lvWhen(LH.d.meta.regTo) : ''].filter(Boolean).join(' \u00b7 ')) + '</td></tr>' : '') +
+        (LH.d.meta.ciFrom || LH.d.meta.ciTo ? '<tr><th>Check-in</th><td>' + pvEsc([LH.d.meta.ciFrom ? 'opens ' + lvWhen(LH.d.meta.ciFrom) : '', LH.d.meta.ciTo ? 'closes ' + lvWhen(LH.d.meta.ciTo) : ''].filter(Boolean).join(' \u00b7 ')) + '</td></tr>' : '') +
         '<tr><th>Pistes</th><td>' + (lvPistesUsed(m.matches).filter(Boolean).join(', ') || meta.pistes) + '</td></tr></table>' +
         '<div class="pv-note">No app needed: open the link from the QR code, or go to ' + pvEsc(lvBaseUrl()) + ' and enter code <b>' + pvEsc(LH.code) + '</b>.</div>');
   } else if (kind === 'results'){
@@ -6807,7 +6971,7 @@ function pvPng(title){
 function lhRefsTabHtml(){
   var list = Array.isArray(LH.d.referees) ? LH.d.referees : [], claims = LH.claims || {}, busy = {};
   Object.keys(claims).forEach(function(k){ var c = liveCleanClaim(claims[k]); if (c && c.status === 'active') busy[c.ref] = (busy[c.ref]||0) + 1; });
-  return lhRefsCard() +
+  return lhRegInbox('referee') + lhRefsCard() +
     '<div class="lv-card" style="text-align:center;"><b>🧑\u200d⚖️ Referee QR</b><div class="lv-sub" style="margin-top:2px;">Referees scan this, pick their name and start. No PIN to type.</div>' +
       (LH.refPin ? '<div id="lhRefQr" class="lv-qr"></div><div class="lv-sub" style="margin-top:0;">Event code <b>' + esc(LH.code) + '</b> \u00b7 Referee PIN <b>' + esc(LH.refPin) + '</b></div>' +
         '<div class="live-actions"><button class="btn btn-gold" onclick="lhShareLink(\'ref\')">Share referee link</button><button class="btn btn-ghost" onclick="lhQrSheet(\'ref\')">⛶ Full screen</button></div>'
@@ -6832,7 +6996,7 @@ function lhShareHtml(){
   var link = lvViewLink(LH.code);
   var exp = LH.d.meta.expiresAt || lvExpiry(LH.d.meta.date, LH.d.meta.createdAt);
   return '<div class="lv-expiry" style="margin:0 0 10px;">\u23F3 This event is deleted automatically on <b>' + esc(lvExpiryText(exp)) + '</b> (7 days after the event date). Change the date in \u2699 settings.</div>' +
-    lhCheckinCard() + lhQrCard() +
+    lhRegCard() + lhCheckinCard() + lhQrCard() +
     lhPrintCard() +
     '<div class="lv-card"><div class="live-actions" style="margin:0;"><button class="btn btn-ghost" onclick="lhShowPins(false)">Show PINs</button><button class="btn btn-ghost" onclick="lvOpenView(\'' + LH.code + '\')">Preview viewer page</button></div></div>' +
     '<div class="lv-card"><div class="lv-sub" style="margin-top:0;">On this device only:</div>' +
@@ -7154,7 +7318,7 @@ function qrScanFile(inp){
 function qrGot(text){
   text = String(text || '');
   var h = text.indexOf('#') >= 0 ? text.slice(text.indexOf('#')) : '';
-  if (!/(view|checkin|ref|host|bout|live)=/.test(h)){
+  if (!/(view|checkin|ref|host|bout|live|display)=/.test(h)){
     qrMsg('That QR code isn\u2019t a Starport Fencing code. Ask the host for the event QR.');
     try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){}
     return;
@@ -7214,7 +7378,7 @@ function lvvRender(){
         return rl.map(function(n){ return '<option value="' + escAttr(n) + '"' + (n === liveConn.ref ? ' selected' : '') + '>🧑\u200d⚖️ ' + esc(n) + '</option>'; }).join('') + '<option value="__o">Someone else\u2026</option>'; })() + '</select>'
       : '<select style="margin-bottom:10px;" onchange="lvvSetMe(this.value)">' + opts + '</select>');
   if (lvIsRef()) html += '<div class="live-banner" style="border-color:rgba(46,125,212,.6);background:rgba(46,125,212,.12);">🧑\u200d⚖️ Refereeing as <b>' + esc(liveConn.ref) + '</b>. Tap a bout to referee it, enter a paper score sheet, or change fencers in a team\u2019s bout order. Bouts you are refereeing are highlighted.</div>';
-  else html += lvCheckinBanner(m);
+  else html += lvRegBanner(m) + lvCheckinBanner(m);
   if (LV.fromLink){ LV.fromLink = false; var myId = lvMyFid(m); if (m.meta.checkin === 'open' && !(myId && m.checkins[myId])) LV.wantCheckin = true; }
   if (LV.wantCheckin){ LV.wantCheckin = false; setTimeout(function(){ lvCheckinSheet(); }, 0); }
   if (LV.me) html += lvNextBoutHtml(m, LV.me);
@@ -7269,9 +7433,9 @@ function lvMatchDetail(id){
     var cl = m.claims && m.claims[id], closed = lvClosed(m, x);
     if (cl && cl.status === 'active' && !closed) html += '<div class="lv-sub">🔒 ' + (cl.device === liveDeviceId() ? 'You are refereeing this bout' : esc(cl.ref) + ' is refereeing this bout') + '</div>';
     html += '<div class="sheet-row" style="flex-direction:column;gap:8px;">' +
-      '<button class="btn btn-gold btn-block" onclick="lvRefScore(\'' + id + '\')">⚔ ' + (closed ? 'Open in Scoreboard' : 'Referee this bout') + '</button>' +
+      '<button class="btn btn-gold btn-block" onclick="lvRefScore(\'' + id + '\')">⚔ ' + (closed ? 'Open in the built-in scoreboard' : 'Referee with the built-in scoreboard') + '</button>' +
       (x.fmt === 'team' && x.relay && !closed ? '<button class="btn btn-ghost btn-block" onclick="lvRefOrderSheet(\'' + id + '\')">⇄ Change fencers</button>' : '') +
-      '<button class="btn btn-ghost btn-block" onclick="lvRefPaper(\'' + id + '\')">📝 Paper score sheet</button></div>';
+      '<button class="btn btn-ghost btn-block" onclick="lvRefPaper(\'' + id + '\')">📝 Enter the score (venue\u2019s own scoreboard or paper sheet)</button></div>';
   }
   html += '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button>' +
     '<button class="btn btn-gold btn-block" onclick="lvMatchPicture(\'' + id + '\')">📥 Save as picture</button></div>';
@@ -7319,10 +7483,60 @@ function lvMatchPicture(id){
     shareCanvasAsImage(c, 'starport-' + String((x.teamA||'a') + '-v-' + (x.teamB||'b')).replace(/[^A-Za-z0-9]+/g,'-') + '.png');
   } catch(e){ toast('Could not create the picture'); }
 }
+/* ---------- REGISTRATION (fencers and referees add themselves; the host adds them to the event) ---------- */
+function lvMyRegs(code){ var r = Store.get('starport_reg_' + code, []); return Array.isArray(r) ? r : []; }
+function lvRegBanner(m){
+  var st = m.meta.reg, mine = lvMyRegs(LV.code), out = '';
+  mine.forEach(function(r){
+    var pending = m.regs.some(function(g){ return g.id === r.id; });
+    var added = r.kind === 'fencer' ? m.fencers.some(function(f){ return f.name === r.name; }) : lvRefList(LV.pub).indexOf(r.name) >= 0;
+    out += '<div class="lv-ci ok">' + (added ? '\u2705 <b>' + esc(r.name) + '</b> is in the event as a ' + r.kind : '\uD83D\uDCDD <b>' + esc(r.name) + '</b> registered as a ' + r.kind + (pending ? ' \u2014 waiting for the organiser to add you' : ' \u2014 the organiser has seen it')) + '</div>';
+  });
+  if (st === 'open') return out + '<div class="lv-ci"><div><b>\uD83D\uDCDD Registration is open</b><br><span>' + (m.meta.regTo ? 'Closes ' + esc(lvWhen(m.meta.regTo)) : 'Add yourself to this event') + '</span></div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;"><button class="btn btn-gold btn-sm" onclick="lvRegSheet(\'fencer\')">Register to fence</button><button class="btn btn-ghost btn-sm" onclick="lvRegSheet(\'referee\')">Register as referee</button></div></div>';
+  if (!st && m.meta.regFrom) return out + '<div class="lv-ci closed">\uD83D\uDCDD Registration opens ' + esc(lvWhen(m.meta.regFrom)) + '</div>';
+  return out;
+}
+function lvRegSheet(kind){
+  if (!LV) return;
+  var m = lvModel(LV.pub, LV.res);
+  if (m.meta.reg !== 'open'){ toast('Registration is closed \u2014 please contact the organiser'); return; }
+  var fencer = kind === 'fencer';
+  lvSheet('<div class="sheet-title">\uD83D\uDCDD ' + (fencer ? 'Register to fence' : 'Register as a referee') + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">' + esc(m.meta.name) + (m.meta.date ? ' \u00b7 ' + esc(auDate(m.meta.date)) : '') + '. The organiser adds you to the event.</div>' +
+    '<label>Full name</label><input id="rgName" maxlength="40" autocomplete="name" placeholder="As it should appear on the schedule">' +
+    (fencer ? '<div style="display:flex;gap:8px;margin-top:10px;"><div style="flex:0 0 42%;"><label>Country</label><select id="rgCountry">' + countryOptionsHtml() + '</select></div>' +
+      '<div style="flex:1;"><label>Club</label><input id="rgClub" maxlength="40"></div></div>' +
+      '<label style="margin-top:10px;">Skill level</label>' + lhSkillPicker(3) + '<div class="lv-sub">1 = beginner \u00b7 3 = club regular \u00b7 5 = national level. Used to make even teams and pools.</div>'
+      : '<label style="margin-top:10px;">Club (optional)</label><input id="rgClub" maxlength="40">') +
+    '<div id="rgMsg" class="lv-sub" style="min-height:18px;"></div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Cancel</button><button class="btn btn-gold btn-block" id="rgBtn" onclick="lvRegSend(\'' + kind + '\')">Register</button></div>');
+  setTimeout(function(){ try { document.getElementById('rgName').focus(); } catch(e){} }, 50);
+}
+function lvRegSend(kind){
+  var name = sStr(lvVal('rgName'), 40), msg = document.getElementById('rgMsg'), btn = document.getElementById('rgBtn');
+  if (name.length < 2){ msg.textContent = 'Type your full name.'; return; }
+  var m = lvModel(LV.pub, LV.res);
+  if (kind === 'fencer' && m.fencers.some(function(f){ return f.name.toLowerCase() === name.toLowerCase(); })){ msg.textContent = name + ' is already in this event.'; return; }
+  var body = { kind:kind, name:name, at:Date.now(), device:liveDeviceId() };
+  var club = sStr(lvVal('rgClub'), 40); if (club) body.club = club;
+  if (kind === 'fencer'){ var c = lvVal('rgCountry'); if (c) body.country = sCountry(c); body.skill = sInt(lhSegVal('lfSkill'), 1, 5, 3); }
+  var id = lvNonce(), code = LV.code;
+  btn.disabled = true; msg.textContent = 'Sending\u2026';
+  liveFetch('PUT', '/events/' + sId(code) + '/public/regs/' + id, body).then(function(r){
+    if (r.ok){
+      var mine = lvMyRegs(code); mine.push({ id:id, kind:kind, name:name, at:body.at }); Store.set('starport_reg_' + code, mine.slice(-6));
+      if (kind === 'fencer'){ LV.me = name; Store.set('starport_lv_me_' + code, name); }
+      lvCloseSheet(); toast('\u2705 Registered \u2014 the organiser will add you'); lvvRender(); return;
+    }
+    btn.disabled = false; msg.textContent = r.status === 401 ? 'Registration has closed \u2014 please contact the organiser.' : 'Not sent (' + liveReason(r) + '). Try again.';
+  });
+}
 /* ---------- CHECK-IN (fencers, no login) ---------- */
 function lvMyFid(m){ for (var i=0;i<m.fencers.length;i++) if (m.fencers[i].name === (LV && LV.me)) return m.fencers[i].id; return null; }
 function lvCheckinBanner(m){
-  var st = m.meta.checkin; if (!st) return '';
+  var st = m.meta.checkin;
+  if (!st) return m.meta.ciFrom ? '<div class="lv-ci closed">\uD83D\uDCCD Check-in opens ' + esc(lvWhen(m.meta.ciFrom)) + '</div>' : '';
   var present = m.fencers.filter(function(f){ return !f.absent; }), here = present.filter(function(f){ return m.checkins[f.id]; }).length;
   var fid = lvMyFid(m), mine = fid && m.checkins[fid], nAbs = m.fencers.length - present.length;
   present = m.fencers;   // counts are "X of everyone", with absent fencers listed separately
@@ -7613,6 +7827,8 @@ document.addEventListener('visibilitychange', function(){
 function lvHandleLink(){
   try {
     var h = String(location.hash || '');
+    var md = h.match(/display=([A-Za-z0-9]{6})/);
+    if (md){ try { history.replaceState(null, '', location.pathname); } catch(e){} dispOpen(md[1].toUpperCase()); return true; }
     var mc = h.match(/checkin=([A-Za-z0-9]{6})/);
     if (mc){ try { history.replaceState(null, '', location.pathname); } catch(e){} lvOpenView(mc[1].toUpperCase(), { checkin:true }); return true; }
     var mr = h.match(/ref=([A-Za-z0-9]{6})(?:&p=(\d{4,10}))?/);
@@ -7636,7 +7852,8 @@ function appCfgApply(){
   var n = APP_CFG && APP_CFG.notice, el = document.getElementById('appNote');
   if (el) el.innerHTML = (n && n.on && n.text) ? '<div class="app-note">📣 ' + esc(n.text) + '</div>' : '';
   var html = (appDonateOn() ? '<button class="app-link gold" onclick="donateOpen()">💛 Support this app</button>' : '') +
-             (appFeedbackOn() ? '<button class="app-link" onclick="fbOpen()">💬 Send feedback</button>' : '');
+             (appFeedbackOn() ? '<button class="app-link" onclick="fbOpen()">💬 Send feedback</button>' : '') +
+             '<button class="app-link" onclick="appGuide()">📖 User guide</button>';
   var els = document.querySelectorAll('.app-links'); for (var i = 0; i < els.length; i++) els[i].innerHTML = html;
 }
 function appCfgLoad(){
@@ -7662,6 +7879,7 @@ function donateFmt(t){
     return x;
   }).join('\n');
 }
+function appGuide(sec){ try { location.href = './manual.html' + (sec ? '#' + sec : ''); } catch(e){} }
 function donateGo(u){ if (isNative()){ var B = capPlugin('Browser'); if (B && B.open){ B.open({ url:u }); return false; } } return true; }
 function fbCtx(){
   var scr = ''; try { var v = document.querySelector('.view.on'); scr = v ? v.id : ''; } catch(e){}
@@ -7702,6 +7920,133 @@ function fbSend(){
     err.textContent = (r.data && r.data.error) || (r.status ? 'Could not send (' + r.status + '). Please try again.' : 'No internet connection. Your message is kept — try again when you’re online.');
   });
 }
+
+
+/* ============================================================
+   📺 BIG-SCREEN SCOREBOARD
+   The referee's phone is the remote: every change (touch, card, timer start/stop,
+   period, bout) is sent once; the screen runs the clock itself between updates,
+   so a 3-minute bout costs a handful of requests, not one per second.
+   ============================================================ */
+var DISP = Store.get('starport_disp', null), DISP_LAST = { sig:'', at:0, t:null }, DV = null;
+function dispOk(){ return !!(LIVE_DB && liveIsCF()); }
+function dispLink(code){ var b = lvBaseUrl(); return b ? b + '#display=' + code : ''; }
+function dispSide(S){
+  var c = M['cards' + S] || {};
+  return { name:M['team' + S] || '', club:M['club' + S] || '', country:M['country' + S] || '', score:M['score' + S] | 0, cls:S === 'A' ? 'a' : 'b', y:c.y | 0, r:c.r | 0 };
+}
+function dispState(){
+  var on = M && document.getElementById('scoring').classList.contains('on');
+  if (!on) return { v:1, idle:true, at:Date.now() };
+  var L = sw ? 'B' : 'A', R = sw ? 'A' : 'B', relay = null;
+  if (M.relay && M.bouts && M.bouts.length){
+    var ab = activeBout();
+    relay = { n:ab.boutNum, of:M.bouts.length, fL:(sw ? ab.fencerB : ab.fencerA) || '', fR:(sw ? ab.fencerA : ab.fencerB) || '', pL:(sw ? ab.ptsB : ab.ptsA) | 0, pR:(sw ? ab.ptsA : ab.ptsB) | 0 };
+  }
+  return { v:1, label:recLabelLine(M), weapon:M.weaponName || '', fmt:M.fmtName || '', target:M.target | 0, done:M.status === 'complete',
+    winner:M.status === 'complete' ? (M.winner === 'A' ? M.teamA : (M.winner === 'B' ? M.teamB : 'Tied')) : '',
+    L:dispSide(L), R:dispSide(R), relay:relay, period:M.period | 0, periods:M.periodsTotal | 0,
+    clock:timer.seconds | 0, running:!!timer.running, brk:brk.active ? { s:brk.seconds | 0, running:!!brk.running } : null,
+    piste:(M.live && M.live.piste) || '', at:Date.now() };
+}
+function dispMaybe(force){
+  if (!DISP || !dispOk()) return;
+  var st = dispState(), ticking = st.running || (st.brk && st.brk.running);
+  var sig = JSON.stringify(st, function(k, v){ return k === 'at' ? undefined : ((k === 'clock' && st.running) || (k === 's' && ticking) ? undefined : v); });
+  var due = ticking && Date.now() - DISP_LAST.at > 15000;
+  if (!force && sig === DISP_LAST.sig && !due) return;
+  DISP_LAST.sig = sig;
+  clearTimeout(DISP_LAST.t);
+  DISP_LAST.t = setTimeout(function(){ dispSend(); }, force ? 0 : 120);
+}
+function dispSend(){
+  if (!DISP) return;
+  var st = dispState(); DISP_LAST.at = Date.now();
+  liveFetch('PUT', '/displays/' + DISP.code, { token:DISP.token, state:st }).then(function(r){
+    if (r.status === 401){ DISP = null; Store.set('starport_disp', null); dispBtnState(); toast('That screen code was taken — tap 📺 to make a new one'); }
+  });
+}
+function dispBtnState(){ var b = document.getElementById('dispBtn'); if (b){ b.className = 'btn btn-sm ' + (DISP ? 'btn-gold' : 'btn-ghost'); b.textContent = DISP ? '📺 ' + DISP.code : '📺'; } }
+function dispSheet(){
+  if (!dispOk()){ toast('Big-screen scoreboards need Fencing Live (internet)'); return; }
+  if (!DISP){
+    lvSheet('<div class="sheet-title">📺 Show on a big screen</div>' +
+      '<div class="lv-sub" style="margin-top:0;">Put an iPad, laptop or TV by the piste (on the floor or on top of the scoring lights). It shows the names, score, timer and cards live, like a classic scoreboard, while you keep scoring on this phone.</div>' +
+      '<div class="lv-sub">Needs internet on both devices. The screen keeps the same code for every bout you score on this phone.</div>' +
+      '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Cancel</button><button class="btn btn-gold btn-block" onclick="dispCreate()">Create screen code</button></div>');
+    return;
+  }
+  var link = dispLink(DISP.code);
+  lvSheet('<div class="sheet-title">📺 Screen ' + esc(DISP.code) + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">On the iPad or laptop: scan this QR, or open <b>' + esc(lvBaseUrl().replace(/^https?:\/\//, '')) + '</b> → Fencing Live → Scoreboard screen and type <b>' + esc(DISP.code) + '</b>. Then tap Full screen on it.</div>' +
+    '<div id="dispQr" class="lv-qr"></div>' +
+    '<div class="lv-poster-n" style="text-align:center;font-size:44px;letter-spacing:6px;margin:4px 0;">' + esc(DISP.code) + '</div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + link + '\')">Copy link</button><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" style="color:var(--red2);border-color:rgba(231,76,60,.4);" onclick="dispStop()">Stop this screen</button></div>');
+  lvQrInto('dispQr', link, 200);
+}
+function dispCreate(){
+  DISP = { code:lvCode(), token:lvNonce() + lvNonce().slice(0, 8) };
+  Store.set('starport_disp', DISP); DISP_LAST.sig = '';
+  dispBtnState(); dispMaybe(true); dispSheet();
+}
+function dispStop(){
+  var d = DISP; if (!d) return;
+  DISP = null; Store.set('starport_disp', null); dispBtnState(); lvCloseSheet();
+  liveFetch('PUT', '/displays/' + d.code, { token:d.token, end:true }).then(function(){ toast('Screen stopped'); });
+}
+/* ----- the screen itself ----- */
+function dispOpenFromInput(){ var c = String(lvVal('dvCodeIn') || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length !== 6){ toast('Screen codes have 6 characters'); return; } dispOpen(c); }
+function dispOpen(code){
+  if (!dispOk()){ toast('Big-screen scoreboards need Fencing Live (internet)'); return; }
+  dispClose();
+  DV = { code:code, st:null, recv:0, net:'', tick:null, stream:null };
+  show('displayView'); requestWake();
+  DV.stream = lvStream('/displays/' + code, function(tree){ DV.st = tree; DV.recv = Date.now(); dispRender(); }, function(n){ DV.net = n; dispRender(); });
+  DV.tick = setInterval(dispRender, 250);
+  dispRender();
+}
+function dispClose(){
+  if (!DV) return;
+  try { DV.stream && DV.stream.close && DV.stream.close(); } catch(e){}
+  clearInterval(DV.tick); DV = null; releaseWake();
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
+}
+function dispExit(){ dispClose(); goLive(); }
+function dispFull(){ try { var el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen).call(el); } catch(e){ toast('Use the browser menu to go full screen'); } }
+function dispClock(sec){ sec = Math.max(0, sec | 0); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+function dispRender(){
+  var root = document.getElementById('dvRoot'); if (!root || !DV) return;
+  var st = DV.st, el = Math.floor((Date.now() - DV.recv) / 1000);
+  var foot = '<div class="dv-foot"><span>' + esc(DV.code) + ' · ' + (DV.net === 'live' ? '● live' : (DV.net === 'offline' ? '○ offline' : '○ connecting')) + '</span><button onclick="dispFull()">⛶ Full screen</button><button onclick="dispExit()">Exit</button></div>';
+  if (!st || st.idle || st.ended){
+    root.innerHTML = '<div class="dv-idle"><b>STARPORT</b><div>' + (st && st.ended ? 'This screen has been stopped.' : (st ? 'Waiting for the next bout…' : 'Waiting for the referee’s scoreboard…')) + '</div>' +
+      '<div style="font-size:.7em;">Screen code <b style="font-size:1.4em;color:var(--white);font-family:\'DM Mono\',monospace;">' + esc(DV.code) + '</b></div></div>' + foot;
+    return;
+  }
+  var clk = st.running ? st.clock - el : st.clock, crit = st.running && clk <= 10;
+  function name(sd, right){ var aff = [sd.country, sd.club].filter(Boolean).join(' · '); return '<div class="dv-name col-' + sd.cls + (right ? ' right' : '') + '">' + esc(sd.name) + (aff ? '<small>' + esc(aff) + '</small>' : '') + '</div>'; }
+  function cards(sd){ return (sd.y ? '🟨' + (sd.y > 1 ? '×' + sd.y : '') + ' ' : '') + (sd.r ? '🟥' + (sd.r > 1 ? '×' + sd.r : '') : '') || '&nbsp;'; }
+  var period = st.relay ? 'Bout ' + st.relay.n + ' of ' + st.relay.of : (st.periods > 1 ? 'Period ' + st.period + ' of ' + st.periods : '');
+  var html = '<div class="dv-top"><span>' + esc([st.weapon, st.fmt, st.target ? st.target + ' pts' : ''].filter(Boolean).join(' · ')) + '</span><span><b>' + esc(st.piste ? 'Piste ' + st.piste : '') + '</b></span></div>' +
+    '<div class="dv-names">' + name(st.L, false) + name(st.R, true) + '</div>' +
+    '<div class="dv-main"><div class="dv-score col-' + st.L.cls + '">' + st.L.score + '</div>' +
+      '<div class="dv-mid">' + (st.done ? '' : '<div class="dv-clock' + (st.running ? (crit ? ' crit' : ' run') : '') + '">' + dispClock(clk) + '</div><div class="dv-state">' + (st.running ? '● Fencing' : '❚❚ Halt') + '</div>') +
+        (period ? '<div class="dv-period">' + esc(period) + '</div>' : '') + '</div>' +
+      '<div class="dv-score col-' + st.R.cls + '">' + st.R.score + '</div></div>' +
+    (st.relay ? '<div class="dv-relay">' + esc(st.relay.fL) + '<b>' + st.relay.pL + '–' + st.relay.pR + '</b>' + esc(st.relay.fR) + '</div>' : '') +
+    '<div class="dv-cards"><span>' + cards(st.L) + '</span><span>' + cards(st.R) + '</span></div>';
+  if (st.done) html += '<div class="dv-win">🏆 ' + esc(st.winner) + '</div>';
+  if (st.brk && !st.done) html += '<div class="dv-brk"><div>BREAK</div><div class="dv-clock">' + dispClock(st.brk.running ? st.brk.s - el : st.brk.s) + '</div></div>';
+  root.innerHTML = html + foot;
+}
+(function(){
+  var rA = renderAll; renderAll = function(){ rA.apply(this, arguments); dispMaybe(); };
+  var rT = renderTimerBlock; renderTimerBlock = function(){ rT.apply(this, arguments); dispMaybe(); };
+  var rB = renderBreak; renderBreak = function(){ rB.apply(this, arguments); dispMaybe(); };
+  var sB = stopBreak; stopBreak = function(){ sB.apply(this, arguments); dispMaybe(); };
+  var sh = show; show = function(id){ if (id !== 'displayView' && DV) dispClose(); sh.apply(this, arguments); if (DISP && id !== 'displayView') setTimeout(function(){ dispMaybe(); }, 60); if (id === 'scoring') dispBtnState(); };
+})();
 
 /* Boot: on native, restore any storage the WebView may have evicted. */
 Store.hydrateFromNative(['starport_matches','starport_settings','starport_live','starport_live_outbox','starport_live_sent','starport_device','starport_lv_recent'], function(){ loadSettings(); try { liveLoadConn(); renderLivePanel(); } catch(e){} });
