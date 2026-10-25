@@ -381,6 +381,10 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .dv:hover .dv-foot,.dv-foot:focus-within{opacity:1;}
 .dv-foot button{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;cursor:pointer;}
 .dv-foot span{font-size:12px;color:var(--muted);}
+.lu-row{display:flex;gap:8px;align-items:center;margin-top:6px;}
+.lu-row select{flex:1;min-width:0;width:auto;}
+.lu-row input{flex:1;min-width:0;}
+.lu-pos{flex:0 0 30px;height:30px;line-height:30px;text-align:center;border-radius:50%;background:rgba(201,162,39,.15);color:var(--gold);font-weight:700;}
 .app-note{background:rgba(201,162,39,.14);border:1px solid rgba(201,162,39,.45);color:var(--white);border-radius:12px;padding:10px 12px;margin-top:16px;font-size:14px;line-height:1.45;white-space:pre-wrap;}
 .app-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:22px;}
 .app-links:empty{display:none;}
@@ -3610,14 +3614,14 @@ function liveFetch(method, path, body){
     if (!LIVE_DB){ fin({ok:false, status:0, err:'not-configured'}); return; }
     try { if (navigator && navigator.onLine === false){ fin({ok:false, status:0, err:'offline'}); return; } } catch(e){}
     var ctrl = null; try { ctrl = new AbortController(); } catch(e){}
-    var t = setTimeout(function(){ try { if (ctrl) ctrl.abort(); } catch(e){} fin({ok:false, status:0, err:'timeout'}); }, 10000);
+    var t = setTimeout(function(){ try { if (ctrl) ctrl.abort(); } catch(e){} fin({ok:false, status:0, err:'timeout'}); }, method === 'GET' ? 12000 : 30000);
     try {
       var opt = { method:method, headers:{'Content-Type':'application/json'}, cache:'no-store' };
       var u = liveUrl(path);
       // Cloudflare: send writes as a "simple" POST (no extra browser pre-flight request, so half the request count)
       if (liveIsCF() && method !== 'GET'){ u += (u.indexOf('?') >= 0 ? '&' : '?') + 'm=' + method; opt.method = 'POST'; opt.headers = {'Content-Type':'text/plain;charset=UTF-8'}; }
       if (body != null) opt.body = JSON.stringify(body);
-      if (liveKeepAlive && opt.body && opt.body.length < 60000) opt.keepalive = true;
+      if (liveKeepAlive && opt.body && opt.body.length < 24000) opt.keepalive = true;
       if (ctrl) opt.signal = ctrl.signal;
       fetch(u, opt).then(function(r){
         return r.text().then(function(txt){
@@ -3633,7 +3637,9 @@ function liveReason(r){
   if (r.err==='not-configured') return 'Starport Live is not switched on in this version yet';
   if (r.err==='offline' || r.err==='network') return 'no internet connection';
   if (r.err==='timeout') return 'connection timed out';
-  if (r.status===401 || r.status===403) return 'PIN rejected or event locked by the host';
+  if (r.status===429) return 'too many requests from this Wi-Fi \u2014 it will retry by itself';
+  if (r.status===401 || r.status===403) return (r.data && r.data.error && /lock/i.test(r.data.error)) ? 'results are locked by the host' : 'PIN rejected or event locked by the host';
+  if (r.status===413) return 'too large to send';
   if (r.status===404) return 'event not found';
   return 'server error ' + r.status;
 }
@@ -3675,6 +3681,9 @@ function liveCleanMatch(key, x, defWeapon){
   if (fmt==='team'){
     m.rosterA = liveCleanRoster(x.rosterA);
     m.rosterB = liveCleanRoster(x.rosterB);
+    m.squadA = Array.isArray(x.squadA) ? x.squadA.slice(0,8).map(function(n){ return sStr(n,40); }).filter(Boolean) : [];
+    m.squadB = Array.isArray(x.squadB) ? x.squadB.slice(0,8).map(function(n){ return sStr(n,40); }).filter(Boolean) : [];
+    m.luBy = x.lu === true ? 'Host' : ''; m.orderNote = sStr(x.ordNote, 200);
     if (x.relay && typeof x.relay==='object'){
       var rk = Object.keys(x.relay), rel = [];
       for (var i=0;i<rk.length && i<9;i++){
@@ -4337,6 +4346,7 @@ function liveBuildPayload(src, final){
     updatedAt: Date.now()
   };
 }
+var liveQSeq = 0;
 function liveQueue(src, final, claim){
   if (!src || !src.live) return null;
   var payload = liveBuildPayload(src, final);
@@ -4344,14 +4354,24 @@ function liveQueue(src, final, claim){
   var key = liveKey(src.live.code, src.live.matchId);
   var ob = liveOutbox();
   if (!final && ob[key] && ob[key].payload && ob[key].payload.final) return key;  // never let a part-result replace a waiting final
-  ob[key] = { code:src.live.code, matchId:src.live.matchId, payload:payload, queuedAt:Date.now(),
+  liveQSeq = Math.max(liveQSeq + 1, Date.now());          // unique even within the same millisecond
+  ob[key] = { code:src.live.code, matchId:src.live.matchId, payload:payload, queuedAt:liveQSeq,
     claim: final ? 'done' : (claim || null), ref: src.live.ref || src.referee || 'Referee' };
   Store.set('starport_live_outbox', ob);
   return key;
 }
+/* One upload at a time per bout: a send asked for while another is on its way (e.g. the final
+   score tapped during the automatic 20-second upload) waits for it, then sends the newest version. */
+var liveChain = {};
 function liveSendKey(key){
+  var p = (liveChain[key] || Promise.resolve()).then(function(){ return liveSendKeyNow(key); }, function(){ return liveSendKeyNow(key); });
+  liveChain[key] = p;
+  p.then(function(){ if (liveChain[key] === p) delete liveChain[key]; });
+  return p;
+}
+function liveSendKeyNow(key){
   var e = liveOutbox()[key];
-  if (!e || liveSending[key]) return Promise.resolve(false);
+  if (!e) return Promise.resolve(liveState[key] && liveState[key].state === 'ok' ? { ok:true, reason:'' } : false);
   liveSending[key] = true;
   liveState[key] = { state:'sending' };
   try { renderLiveLine(); } catch(x){}
@@ -4387,6 +4407,18 @@ function liveSendKey(key){
     return { ok:r.ok, reason:r.ok ? '' : liveReason(r) };
   });
 }
+/* Anything still waiting to upload is retried by itself: every 30 s, when the phone gets its
+   internet back, and when the app comes back to the screen. Nothing needs a tap. */
+function liveAutoRetry(){
+  try {
+    if (navigator && navigator.onLine === false) return;
+    var ob = liveOutbox();
+    Object.keys(ob).forEach(function(k){ if (!liveSending[k] && !liveChain[k]) liveSendKey(k); });
+  } catch(e){}
+}
+setInterval(liveAutoRetry, 30000);
+window.addEventListener('online', function(){ setTimeout(liveAutoRetry, 1500); });
+document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') setTimeout(liveAutoRetry, 800); });
 function liveUploadNow(src, final, label){
   try {
     var key = liveQueue(src, final);
@@ -4451,7 +4483,7 @@ function renderLiveLine(){
   var cls = 'live-line';
   el.onclick = null;
   if (st && st.state==='sending') txt += 'uploading…';
-  else if (ob[key]){ txt += '⚠ not uploaded — tap to retry'; cls += ' fail'; el.onclick = function(){ liveSendKey(key).then(function(r){ if (r) toast(r.ok ? '✓ Uploaded' : 'Still not uploaded (' + r.reason + ')'); }); }; }
+  else if (ob[key]){ txt += '⚠ not uploaded' + (st && st.msg ? ' (' + st.msg + ')' : '') + ' — tap to retry'; cls += ' fail'; el.onclick = function(){ liveSendKey(key).then(function(r){ if (r) toast(r.ok ? '✓ Uploaded' : 'Still not uploaded (' + r.reason + ')'); }); }; }
   else if (st && st.state==='ok'){ txt += '✓ uploaded ' + new Date(st.at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); cls += ' ok'; }
   else txt += 'score so far uploads automatically';
   el.className = cls; el.textContent = txt; el.style.display = 'block';
@@ -4620,6 +4652,9 @@ function lvApplyOrders(matches, orders){
   if (!orders || typeof orders !== 'object') return;
   matches.forEach(function(mm){
     var o = orders[mm.id]; if (!o || typeof o !== 'object' || mm.fmt !== 'team') return;
+    lvApplySubs(mm, 'A', o.nA); lvApplySubs(mm, 'B', o.nB);
+    if (o.lu === true) mm.luBy = sStr(o.ref, 40) || 'Referee';
+    if (typeof o.note === 'string') mm.orderNote = sStr(o.note, 200);
     var A = Array.isArray(o.A) ? o.A.map(Number) : null, B = Array.isArray(o.B) ? o.B.map(Number) : null;
     var nA = Math.min((mm.rosterA||[]).length, 4), nB = Math.min((mm.rosterB||[]).length, 4);
     if (!lvOrdOk(A, nA) || !lvOrdOk(B, nB)) return;
@@ -4627,6 +4662,20 @@ function lvApplyOrders(matches, orders){
     mm.orderBy = sStr(o.ref, 40) || 'Referee';
   });
 }
+/* Someone not in the team fencing for it in this match: their name takes that slot's place */
+function lvApplySubs(mm, side, names){
+  if (!names || typeof names !== 'object') return;
+  var orig = (mm['roster' + side] || []), ros = orig.map(function(r){ return { name:r.name, club:r.club || '', country:r.country || '' }; });
+  var known = orig.map(function(r){ return r.name; }).concat(mm['squad' + side] || []);
+  Object.keys(names).sort().forEach(function(k){
+    var i = +k, n = sStr(names[k], 40); if (n.length < 2 || i < 0 || i > 3 || i > ros.length) return;
+    if (i < ros.length && n === ros[i].name) return;
+    var from = orig.filter(function(r){ return r.name === n; })[0];
+    ros[i] = { name:n, club:from ? from.club || '' : '', country:from ? from.country || '' : '', sub:known.indexOf(n) < 0 };
+  });
+  mm['roster' + side] = ros;
+}
+function lhSubsOf(ros, orig){ var out = {}, any = false; (ros || []).forEach(function(r, i){ if (!orig || !orig[i] || orig[i].name !== r.name){ out[i] = r.name; any = true; } }); return any ? out : null; }
 function lvRelayFor(nA, nB, resA, resB, skA, skB, ordA, ordB){
   if (nA < 3 || nB < 3) return null;
   var a = (resA && nA >= 4) ? RELAY_SEQ.A4 : RELAY_SEQ.A3, b = (resB && nB >= 4) ? RELAY_SEQ.B4 : RELAY_SEQ.B3, out = [];
@@ -5179,12 +5228,17 @@ function lhBuildPublic(){
     var x = d.matches[k];
     if (x.fmt === 'team'){
       // a custom bout order belongs to the line-up it was made for: if the team changed since, use the automatic order
-      if (x.ordA && x.ordMA && x.ordMA !== lhMembersKey(d.teams[x.aRef])) delete x.ordA;
-      if (x.ordB && x.ordMB && x.ordMB !== lhMembersKey(d.teams[x.bRef])) delete x.ordB;
+      if (x.ordA && x.ordMA && x.ordMA !== lhMembersKey(d.teams[x.aRef])){ delete x.ordA; delete x.subA; }
+      if (x.ordB && x.ordMB && x.ordMB !== lhMembersKey(d.teams[x.bRef])){ delete x.ordB; delete x.subB; }
       delete x.ordMA; delete x.ordMB;
       var ta = d.teams[x.aRef], tb = d.teams[x.bRef];
       if (ta){ x.teamA = ta.name; x.rosterA = ta.members.slice(0,4).map(function(id){ var f = d.fencers[id]; return { name:f.name, club:f.club||'', country:f.country||'' }; }); }
       if (tb){ x.teamB = tb.name; x.rosterB = tb.members.slice(0,4).map(function(id){ var f = d.fencers[id]; return { name:f.name, club:f.club||'', country:f.country||'' }; }); }
+      if (ta) x.squadA = ta.members.slice(0,8).map(function(id){ return (d.fencers[id] || {}).name || ''; }).filter(Boolean);
+      if (tb) x.squadB = tb.members.slice(0,8).map(function(id){ return (d.fencers[id] || {}).name || ''; }).filter(Boolean);
+      if (x.subA && x.rosterA) lvApplySubs(x, 'A', x.subA); if (x.subB && x.rosterB) lvApplySubs(x, 'B', x.subB);
+      if (x.rosterA) x.rosterA.forEach(function(r){ delete r.sub; }); if (x.rosterB) x.rosterB.forEach(function(r){ delete r.sub; });
+      delete x.subA; delete x.subB;
       var dres = d.meta.reserves === true;
       var rA = (x.resA === true || x.resA === false) ? x.resA : dres, rB = (x.resB === true || x.resB === false) ? x.resB : dres;
       var skOf = function(t){ return t ? t.members.slice(0,4).map(function(id){ return (d.fencers[id] && d.fencers[id].skill) || 3; }) : null; };
@@ -5216,6 +5270,10 @@ function lhPublish(after){
   liveFetch('PATCH', '/events/' + code, body).then(function(r){
     if (!LH || LH.code !== code) return;
     LH.busy = false;
+    if (r.ok && LH.ciAuto && LH.ciAuto.length){
+      var ids = LH.ciAuto.filter(function(f){ return pub.fencers && pub.fencers[f]; }); LH.ciAuto = [];
+      if (ids.length){ var N2 = lvNonce(), b2 = { 'public/_n':N2 }; ids.forEach(function(f){ b2['public/checkins/' + f] = { at:Date.now(), name:pub.fencers[f].name, by:'host' }; }); b2['hostAuth/' + N2] = { pin:LH.hostPin, at:{'.sv':'timestamp'} }; liveFetch('PATCH', '/events/' + code, b2); }
+    }
     if (r.ok){ LH.dirty = false; LH.pubF = pub.fencers || {}; LH.pubM = pub.matches || {}; LH.pub = {}; Object.keys(pub.matches||{}).forEach(function(k){ LH.pub[k] = 1; }); lhSaveLocal(); toast('\u2713 Published'); if (after) after(); }
     else toast('Not published (' + liveReason(r) + '). Your changes are kept on this device.');
     lhRender();
@@ -5372,7 +5430,9 @@ function lhSaveFencer(id, close, again){
   var sk = document.getElementById('lfSkill');
   var f = { name:name, club:sStr(lvVal('lfClub'),40), country:sCountry(lvVal('lfCountry')), skill:sInt(sk ? sk.getAttribute('data-v') : 3,1,5,3) };
   if (id && LH.d.fencers[id] && LH.d.fencers[id].absent) f.absent = true;
-  LH.d.fencers[id || lvId('f')] = f;
+  var nid = id || lvId('f');
+  LH.d.fencers[nid] = f;
+  if (!id && (LH.d.meta.checkin || LH.d.meta.ciFrom)){ LH.ciAuto = (LH.ciAuto || []).concat(nid); toast(name + ' added \u2014 checked in when you Publish'); }
   lhDirty();
   if (again){ lhFencerSheet(); toast('Added ' + name); } else lvCloseSheet();
 }
@@ -5452,7 +5512,7 @@ function lhTeamOf(fid){ var t = null; Object.keys(LH.d.teams).forEach(function(k
 function lhTeamIds(){ return Object.keys(LH.d.teams).sort(function(a,b){ return (LH.d.teams[a].order||0) - (LH.d.teams[b].order||0); }); }
 function lhChip(fid, pos){
   var f = LH.d.fencers[fid]; if (!f) return '';
-  var tag = (typeof pos === 'number') ? '<b class="lv-pos">' + (pos < 3 ? pos + 1 : 'R') + '</b>' : '';
+  var tag = (typeof pos === 'number') ? '<b class="lv-pos">' + (pos < 3 ? pos + 1 : (pos === 3 ? 'R' : 'R' + (pos - 2))) + '</b>' : '';
   return '<button class="lv-chip' + (LH.sel===fid ? ' sel' : '') + '" onclick="lhTapFencer(\'' + fid + '\')">' + tag + esc(f.name) + ' <small>' + (f.skill||3) + '</small></button>';
 }
 function lhSetReserves(on){
@@ -5605,7 +5665,8 @@ function lhTapFencer(fid){
 function lhMoveTo(tid){
   var f = LH.sel; if (!f) return;
   var from = lhTeamOf(f), T = LH.d.teams;
-  if (tid && T[tid] && T[tid].members.length >= LH_MAX_TEAM){ toast('Teams can have at most ' + LH_MAX_TEAM + ' fencers — swap instead'); return; }
+  if (tid && T[tid] && T[tid].members.length >= 8){ toast('Teams can have at most 8 fencers — swap instead'); return; }
+  if (tid && T[tid] && T[tid].members.length >= LH_MAX_TEAM) toast('Added as an extra reserve \u2014 the referee picks positions 1, 2, 3 and R from the score sheet');
   if (from) T[from].members = T[from].members.filter(function(m){ return m !== f; });
   if (tid && T[tid]) T[tid].members.push(f);
   LH.sel = null; lhDirty();
@@ -5798,7 +5859,9 @@ function lhOrderSheet(id){
   var x = lvFindMatch(lhModel(), id);
   if (!x || x.fmt !== 'team'){ toast('Match not found'); return; }
   if (!x.relay){ toast('Both teams need at least 3 fencers first'); return; }
-  lhOrd = { id:id, rA:x.rosterA.slice(0,4), rB:x.rosterB.slice(0,4), A:x.relay.map(function(p){ return p[0]; }), B:x.relay.map(function(p){ return p[1]; }), teamA:x.teamA, teamB:x.teamB, orderBy:x.orderBy || '', started:lhStarted(id) };
+  var dm = LH.d.matches[id] || {}, oA = (LH.d.teams[dm.aRef] || {}).members || [], oB = (LH.d.teams[dm.bRef] || {}).members || [];
+  var orgA = oA.slice(0,4).map(function(f){ return { name:(LH.d.fencers[f] || {}).name || '' }; }), orgB = oB.slice(0,4).map(function(f){ return { name:(LH.d.fencers[f] || {}).name || '' }; });
+  lhOrd = { id:id, sqA:x.squadA || [], sqB:x.squadB || [], note:dm.ordNote || x.orderNote || '', lu:!!(dm.lu || x.luBy), rA:x.rosterA.slice(0,4).map(function(r){ return { name:r.name, club:r.club, sub:(x.squadA || []).indexOf(r.name) < 0 }; }), rB:x.rosterB.slice(0,4).map(function(r){ return { name:r.name, club:r.club, sub:(x.squadB || []).indexOf(r.name) < 0 }; }), oA:orgA, oB:orgB, A:x.relay.map(function(p){ return p[0]; }), B:x.relay.map(function(p){ return p[1]; }), teamA:x.teamA, teamB:x.teamB, orderBy:x.orderBy || '', started:lhStarted(id) };
   lhOrdRender();
 }
 function lhOrdWarn(o, ros){
@@ -5811,11 +5874,15 @@ function lhOrdRender(){
   var O = lhOrd; if (!O) return;
   function sel(side, i){
     var ros = side === 'A' ? O.rA : O.rB, v = (side === 'A' ? O.A : O.B)[i];
-    return '<select class="lo-sel" onchange="lhOrd.' + side + '[' + i + ']=+this.value;lhOrdRender()">' + ros.map(function(r, k){ return '<option value="' + k + '"' + (k===v?' selected':'') + '>' + esc(r.name) + (k===3 ? ' (R)' : '') + '</option>'; }).join('') + '</select>';
+    return '<select class="lo-sel" onchange="lhOrd.' + side + '[' + i + ']=+this.value;lhOrdRender()">' + ros.map(function(r, k){ return '<option value="' + k + '"' + (k===v?' selected':'') + '>' + esc(r.name) + (r.sub ? ' (sub)' : (k===3 ? ' (R)' : '')) + '</option>'; }).join('') + '</select>';
   }
   function swapRow(side){
     var ros = side === 'A' ? O.rA : O.rB, opts = '<option value="" selected>Choose\u2026</option>' + ros.map(function(r, k){ return '<option value="' + k + '">' + esc(r.name) + '</option>'; }).join('');
     return '<div class="lv-sub" style="margin:6px 0 0;">Swap two fencers in every bout:</div><div class="lo-swap"><select id="loS' + side + '1">' + opts + '</select><span>⇄</span><select id="loS' + side + '2">' + opts + '</select><button class="btn btn-ghost btn-sm" onclick="lhOrdSwap(\'' + side + '\')">Swap</button></div>';
+  }
+  function subRow(side){
+    var ros = side === 'A' ? O.rA : O.rB, opts = '<option value="" selected>Who is replaced\u2026</option>' + ros.map(function(r, k){ return '<option value="' + k + '">' + esc(r.name) + '</option>'; }).join('');
+    return '<div class="lv-sub" style="margin:8px 0 0;">Someone not in the team fencing for them?</div><div class="lo-swap"><select id="loR' + side + '">' + opts + '</select><span>\u2192</span><input id="loN' + side + '" maxlength="40" placeholder="Their name" style="flex:1;min-width:0;"><button class="btn btn-ghost btn-sm" onclick="lhOrdSub(\'' + side + '\')">Use</button></div>';
   }
   function summary(side){
     var ros = side === 'A' ? O.rA : O.rB, r = lhOrdWarn(side === 'A' ? O.A : O.B, ros);
@@ -5825,15 +5892,95 @@ function lhOrdRender(){
   var rows = '';
   for (var i=0;i<9;i++) rows += '<div class="lo-r"><span>' + (i+1) + '</span>' + sel('A', i) + '<span class="lo-t">' + ((i+1)*5) + '</span>' + sel('B', i) + '</div>';
   var isRef = O.mode === 'ref';
+  if (O.after){        // before scoring: only the line-up, as on the paper score sheet
+    lvSheet('<div class="sheet-title">\uD83D\uDCCB Confirm the line-up</div>' +
+      '<div class="lv-sub" style="margin-top:0;">Check each team\u2019s positions against the score sheet: 1, 2, 3 (and 4, 5, 6) fence the FIE order; R is the reserve and only comes in if you swap them in. Pick anyone in the team, or type someone else.</div>' +
+      lhLuHtml(O) +
+      '<div class="sheet-row" style="flex-direction:column;gap:8px;"><button class="btn btn-gold btn-block" id="loSave" onclick="lhLuConfirm()">Confirm line-up and ' + (O.after === 'paper' ? 'enter the score' : 'start scoring') + '</button>' +
+      '<button class="btn btn-ghost btn-block" onclick="lhLuSkip()">Skip \u2014 keep the order as it is</button></div>');
+    return;
+  }
   lvSheet('<div class="sheet-title">⇄ ' + (isRef ? 'Change fencers' : 'Bout order') + '</div>' +
     '<div class="lv-sub" style="margin-top:0;">Change who fences each bout. To swap two fencers everywhere, use Swap. ' + (isRef ? 'Saved straight to Fencing Live — the host, other referees and viewers see it at once.' : 'Referees and viewers get the new order when you Publish. The referee can still change it on the day with ⇄ Team order.') + '</div>' +
     (O.orderBy && !isRef ? '<div class="live-banner">' + esc(O.orderBy) + ' changed this order on the day. Saving here replaces their change.</div>' : '') +
-    (!isRef && !O.started && (O.rA.length >= 4 || O.rB.length >= 4) ? lhOrdResHtml(O) : '') +
+    (!isRef && !O.started && !O.lu && (O.rA.length >= 4 || O.rB.length >= 4) ? lhOrdResHtml(O) : '') +
+    '<details class="lv-card" style="padding:8px 10px;"' + (O.lu ? '' : ' open') + '><summary><b>\uD83D\uDCCB Line-up from the score sheet (1\u00b72\u00b73\u00b7R)</b>' + (O.lu ? ' \u2713' : '') + '</summary>' + lhLuHtml(O) +
+      '<button class="btn btn-ghost btn-block" style="margin-top:8px;" onclick="lhLuApply()">Use this line-up (FIE order, reserve sits out)</button></details>' +
+    lhResInHtml(O) +
+    (O.note ? '<div class="lv-sub">\uD83D\uDCDD ' + esc(O.note) + '</div>' : '') +
     '<div class="lo-h"><span>#</span><span>' + esc(O.teamA) + '</span><span></span><span>' + esc(O.teamB) + '</span></div>' + rows +
-    '<div class="lv-card" style="margin-top:10px;"><b>' + esc(O.teamA) + '</b>' + swapRow('A') + summary('A') + '</div>' +
-    '<div class="lv-card"><b>' + esc(O.teamB) + '</b>' + swapRow('B') + summary('B') + '</div>' +
+    '<div class="lv-card" style="margin-top:10px;"><b>' + esc(O.teamA) + '</b>' + swapRow('A') + subRow('A') + summary('A') + '</div>' +
+    '<div class="lv-card"><b>' + esc(O.teamB) + '</b>' + swapRow('B') + subRow('B') + summary('B') + '</div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Cancel</button><button class="btn btn-gold btn-block" id="loSave" onclick="lhOrdSave()">Save order</button></div>' +
     (isRef ? (O.orderBy ? '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lhOrdReset()">Back to the host\u2019s order</button></div>' : '') : '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lhOrdReset()">Reset to automatic order</button></div>'));
+}
+/* Line-up: positions 1, 2, 3 and R per team, from the team list or typed in */
+function lhLuNames(O, side){
+  var seen = {}, out = [];
+  (O['sq' + side] || []).concat((O['r' + side] || []).map(function(r){ return r.name; })).forEach(function(n){ if (n && !seen[n]){ seen[n] = 1; out.push(n); } });
+  return out;
+}
+function lhLuHtml(O){
+  function side(sd, team, labels){
+    var names = lhLuNames(O, sd), cur = O['r' + sd] || [];
+    return '<div style="margin-top:8px;"><b>' + esc(team) + '</b>' + labels.map(function(lb, k){
+      var v = cur[k] ? cur[k].name : '';
+      var opts = (k === 3 ? '<option value="">\u2014 no reserve \u2014</option>' : '') + names.map(function(n){ return '<option' + (n === v ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__o">Someone else\u2026</option>';
+      return '<div class="lu-row"><span class="lu-pos">' + lb + '</span><select id="lu' + sd + k + '" onchange="var t=document.getElementById(\'lu' + sd + k + 'n\');t.style.display=this.value===\'__o\'?\'block\':\'none\';if(this.value===\'__o\')t.focus()">' + opts + '</select>' +
+        '<input id="lu' + sd + k + 'n" maxlength="40" placeholder="Name" style="display:none;flex:1;min-width:0;"></div>';
+    }).join('') + '</div>';
+  }
+  return side('A', O.teamA, ['1','2','3','R']) + side('B', O.teamB, ['4','5','6','R']);
+}
+function lhLuRead(sd){
+  var out = [];
+  for (var k=0;k<4;k++){
+    var v = lvVal('lu' + sd + k); if (v === '__o') v = sStr(lvVal('lu' + sd + k + 'n'), 40);
+    out.push(sStr(v, 40));
+  }
+  return out;
+}
+function lhLuApply(quiet){
+  var O = lhOrd; if (!O) return false;
+  var L = { A:lhLuRead('A'), B:lhLuRead('B') };
+  for (var s in L){
+    var f = L[s].slice(0,3);
+    if (f.some(function(n){ return n.length < 2; })){ toast('Choose fencers 1, 2 and 3 for ' + (s === 'A' ? O.teamA : O.teamB)); return false; }
+    var all = L[s].filter(Boolean); if (all.length !== all.filter(function(n, i){ return all.indexOf(n) === i; }).length){ toast('Someone is in two positions for ' + (s === 'A' ? O.teamA : O.teamB)); return false; }
+  }
+  ['A','B'].forEach(function(sd){
+    var orig = O['o' + sd] || [], names = L[sd][3] ? L[sd] : L[sd].slice(0,3);
+    var prev = O['r' + sd] || [];
+    // with no reserve chosen, keep the old 4th entry so nothing else moves
+    if (!L[sd][3] && prev[3] && names.indexOf(prev[3].name) < 0) names = names.concat([prev[3].name]);
+    var known = (O['sq' + sd] || []).concat(orig.map(function(r){ return r.name; }));
+    O['r' + sd] = names.map(function(n){ return { name:n, club:'', sub:known.indexOf(n) < 0 }; });
+  });
+  O.A = RELAY_SEQ.A3.slice(); O.B = RELAY_SEQ.B3.slice(); O.lu = true;
+  if (!quiet){ lhOrdRender(); toast('Line-up set \u2014 FIE order, reserves sit out. Save to send it.'); }
+  return true;
+}
+function lhLuConfirm(){ if (lhLuApply(true)) lhOrdSave(); }
+function lhLuSkip(){ var O = lhOrd; if (!O) return; var id = O.id, after = O.after; lhOrd = null; lvCloseSheet(); if (after === 'paper') lvRefPaper(id, true); else lvRefScore(id, true); }
+/* The reserve comes in for one of the three from a given bout, with a note on the sheet */
+function lhResInHtml(O){
+  function side(sd, team){
+    var ros = O['r' + sd] || []; if (ros.length < 4) return '';
+    var outs = ros.slice(0,3).map(function(r, k){ return '<option value="' + k + '">' + esc(r.name) + '</option>'; }).join(''), bouts = '';
+    for (var b=2;b<=9;b++) bouts += '<option value="' + b + '">bout ' + b + '</option>';
+    return '<div class="lv-sub" style="margin:6px 0 0;">' + esc(team) + ': <b>' + esc(ros[3].name) + '</b> (R) replaces</div><div class="lu-row"><select id="ri' + sd + 'o">' + outs + '</select><span class="lv-sub" style="margin:0;">from</span><select id="ri' + sd + 'b">' + bouts + '</select><button class="btn btn-ghost btn-sm" onclick="lhResIn(\'' + sd + '\')">Swap in</button></div>';
+  }
+  var h = side('A', O.teamA) + side('B', O.teamB);
+  return h ? '<div class="lv-card" style="padding:8px 10px;"><b style="font-size:13px;">\u21C4 Reserve comes in</b>' + h + '</div>' : '';
+}
+function lhResIn(sd){
+  var O = lhOrd; if (!O) return;
+  var out = +lvVal('ri' + sd + 'o'), from = +lvVal('ri' + sd + 'b'), arr = sd === 'A' ? O.A : O.B, ros = O['r' + sd], n = 0;
+  for (var i = from - 1; i < 9; i++) if (arr[i] === out){ arr[i] = 3; n++; }
+  if (!n){ toast(ros[out].name + ' has no bouts from bout ' + from); return; }
+  var note = ros[3].name + ' (R) replaced ' + ros[out].name + ' from bout ' + from + ' (' + (sd === 'A' ? O.teamA : O.teamB) + ')';
+  O.note = (O.note ? O.note + '; ' : '') + note;
+  lhOrdRender(); toast(note + ' \u2014 Save to send it');
 }
 function lhOrdResHtml(O){
   var x = LH.d.matches[O.id]; if (!x) return '';
@@ -5850,6 +5997,16 @@ function lhOrdRes(side, on){
   if (side === 'A'){ x.resA = on; delete x.ordA; delete x.ordMA; } else { x.resB = on; delete x.ordB; delete x.ordMB; }
   lhDirty(); lhOrderSheet(O.id);
   toast((side === 'A' ? O.teamA : O.teamB) + (on ? ': all 4 fence' : ': reserve sits out') + ' \u2014 bout order updated, tap Publish');
+}
+function lhOrdSub(side){
+  var O = lhOrd; if (!O) return;
+  var k = lvVal('loR' + side), n = sStr(lvVal('loN' + side), 40);
+  if (k === ''){ toast('Choose who is being replaced'); return; }
+  if (n.length < 2){ toast('Type the name of the person fencing instead'); return; }
+  var ros = side === 'A' ? O.rA : O.rB, old = ros[+k].name;
+  if (ros.some(function(r){ return r.name.toLowerCase() === n.toLowerCase(); })){ toast(n + ' is already in this team'); return; }
+  ros[+k] = { name:n, club:'', sub:true };
+  lhOrdRender(); toast(n + ' fences instead of ' + old + ' in this match');
 }
 function lhOrdSwap(side){
   var O = lhOrd, va = lvVal('loS' + side + '1'), vb = lvVal('loS' + side + '2');
@@ -5870,7 +6027,10 @@ function lhOrdClearOverride(id){
 function lvRefOrderWrite(id, val, done){
   var N = lvNonce(), body = {};
   // a cleared change is kept as a record without A/B, so the host's order applies again
-  body['public/orders/' + sId(id)] = val ? { A:val.A, B:val.B, ref:liveConn.ref || 'Referee', at:Date.now(), nonce:N } : { ref:liveConn.ref || 'Referee', at:Date.now(), nonce:N, cleared:true };
+  var rec = val ? { A:val.A, B:val.B, ref:liveConn.ref || 'Referee', at:Date.now(), nonce:N } : { ref:liveConn.ref || 'Referee', at:Date.now(), nonce:N, cleared:true };
+  if (val && val.nA) rec.nA = val.nA; if (val && val.nB) rec.nB = val.nB;
+  if (val && val.lu) rec.lu = true; if (val && val.note) rec.note = String(val.note).slice(0, 200);
+  body['public/orders/' + sId(id)] = rec;
   body['resultAuth/' + N] = { pin:liveConn.pin, m:sId(id), device:liveDeviceId(), at:Date.now() };
   liveFetch('PATCH', '/events/' + sId(liveConn.code), body).then(done);
 }
@@ -5878,9 +6038,13 @@ function lhOrdSave(){
   var O = lhOrd; if (!O) return;
   if (O.mode === 'ref'){
     var b = document.getElementById('loSave'); if (b) b.disabled = true;
-    lvRefOrderWrite(O.id, { A:O.A.slice(), B:O.B.slice() }, function(r){
+    var after = O.after, oid = O.id, savedAt = Date.now();
+    lvRefOrderWrite(O.id, { A:O.A.slice(), B:O.B.slice(), nA:lhSubsOf(O.rA, O.oA), nB:lhSubsOf(O.rB, O.oB), lu:!!O.lu, note:O.note || '' }, function(r){
       if (b) b.disabled = false;
-      if (r.ok){ lhOrd = null; lvCloseSheet(); toast('✓ Fencers changed — everyone sees the new order'); }
+      if (r.ok){
+        lhOrd = null; lvCloseSheet(); toast(after ? '\u2713 Line-up confirmed' : '✓ Fencers changed — everyone sees the new order');
+        if (after){ var t0 = Date.now(); (function wait(){ var o = LV && LV.pub && LV.pub.orders && LV.pub.orders[oid]; if ((o && (o.at || 0) >= savedAt - 1000) || Date.now() - t0 > 4000){ if (after === 'paper') lvRefPaper(oid, true); else lvRefScore(oid, true); } else setTimeout(wait, 150); })(); }
+      }
       else toast('Not saved (' + liveReason(r) + ')');
     });
     return;
@@ -5888,6 +6052,8 @@ function lhOrdSave(){
   var x = LH.d.matches[O.id]; if (!x) return;
   lhOrdClearOverride(O.id);
   x.ordA = O.A.slice(); x.ordB = O.B.slice(); x.ordMA = lhMembersKey(LH.d.teams[x.aRef]); x.ordMB = lhMembersKey(LH.d.teams[x.bRef]);
+  var sa = lhSubsOf(O.rA, O.oA), sb = lhSubsOf(O.rB, O.oB); if (sa) x.subA = sa; else delete x.subA; if (sb) x.subB = sb; else delete x.subB;
+  if (O.lu) x.lu = true; if (O.note) x.ordNote = O.note.slice(0, 200);
   var dres = LH.d.meta.reserves === true;
   if (x.resA !== true && x.resA !== false) x.resA = dres;
   if (x.resB !== true && x.resB !== false) x.resB = dres;
@@ -5901,7 +6067,7 @@ function lhOrdReset(){
   }
   var x = LH.d.matches[O.id]; if (!x) return;
   lhOrdClearOverride(O.id);
-  delete x.ordA; delete x.ordB; delete x.ordMA; delete x.ordMB; lhOrd = null; lvCloseSheet(); lhDirty(); toast('Back to the automatic order');
+  delete x.ordA; delete x.ordB; delete x.ordMA; delete x.ordMB; delete x.subA; delete x.subB; delete x.lu; delete x.ordNote; lhOrd = null; lvCloseSheet(); lhDirty(); toast('Back to the automatic order');
 }
 function lhPisteListMax(){
   var mx = Math.max(10, sInt(LH.d.meta.pistes,1,99,1));
@@ -7249,22 +7415,30 @@ function lvRefSync(){
   var ev = liveCleanEvent(LV.pub);
   if (ev){ liveConn.eventName = ev.name; liveConn.weapon = ev.weapon; liveConn.pistes = ev.pistes; liveConn.matches = ev.matches; liveConn.fetchedAt = Date.now(); liveSaveConn(); }
 }
-function lvRefScore(id){
+function lvNeedsLineup(id){
+  try { var m = lvModel(LV.pub, LV.res), x = lvFindMatch(m, id), r = m.results[id];
+    return !!(x && x.fmt === 'team' && x.relay && !x.luBy && !(r && (r.hasScore || r.closed))); } catch(e){ return false; }
+}
+function lvRefScore(id, skipLineup){
   if (!lvIsRef()) return;
+  if (!skipLineup && lvNeedsLineup(id)){ lvCloseSheet(); lvRefOrderSheet(id, 'score'); return; }
   lvRefSync(); lvCloseSheet();
   goScoreboard();
   liveLoadMatch(id);
 }
-function lvRefOrderSheet(id){
+function lvRefOrderSheet(id, after){
   if (!lvIsRef()) return;
   var m = lvModel(LV.pub, LV.res), x = lvFindMatch(m, id);
   if (!x || !x.relay){ toast('Both teams need at least 3 fencers first'); return; }
   lvCloseSheet();
-  lhOrd = { id:id, mode:'ref', rA:x.rosterA.slice(0,4), rB:x.rosterB.slice(0,4), A:x.relay.map(function(p){ return p[0]; }), B:x.relay.map(function(p){ return p[1]; }), teamA:x.teamA, teamB:x.teamB, orderBy:x.orderBy || '' };
+  var ev0 = null; try { ev0 = lvModel(LV.pub, LV.res); } catch(e){}
+  var raw = ((LV.pub || {}).matches || {})[id] || {};
+  lhOrd = { id:id, mode:'ref', after:after || null, sqA:x.squadA || [], sqB:x.squadB || [], note:x.orderNote || '', lu:!!x.luBy, oA:liveCleanRoster(raw.rosterA), oB:liveCleanRoster(raw.rosterB), rA:x.rosterA.slice(0,4).map(function(r){ return { name:r.name, club:r.club, sub:!!r.sub }; }), rB:x.rosterB.slice(0,4).map(function(r){ return { name:r.name, club:r.club, sub:!!r.sub }; }), A:x.relay.map(function(p){ return p[0]; }), B:x.relay.map(function(p){ return p[1]; }), teamA:x.teamA, teamB:x.teamB, orderBy:x.orderBy || '' };
   lhOrdRender();
 }
-function lvRefPaper(id){
+function lvRefPaper(id, skipLineup){
   if (!lvIsRef()) return;
+  if (!skipLineup && lvNeedsLineup(id)){ lvCloseSheet(); lvRefOrderSheet(id, 'paper'); return; }
   var m = lvModel(LV.pub, LV.res), x = lvFindMatch(m, id), r = m.results[id];
   if (!x) return;
   lvCloseSheet();
@@ -7677,7 +7851,9 @@ function lvRelayDetails(m, x, open, editFn){
     h += '<div class="lr-r' + (played ? '' : ' dim') + (me && (r.a === me || r.b === me) ? ' mine' : '') + '"><span>' + r.n + '</span>' + lvMeCell(r.a, me, played ? r.rb.ptsA : null, 'A') + '<span>' + (played ? ca + '\u2013' + cb : (r.n*5)) + '</span>' + lvMeCell(r.b, me, played ? r.rb.ptsB : null, 'B') + '</div>';
   });
   h += '</div>';
-  if (x.orderBy) h += '<div class="lv-sub" style="margin:2px 0 0;font-size:11px;">Fencers changed on the day by ' + esc(x.orderBy) + '</div>';
+  if (x.luBy) h += '<div class="lv-sub" style="margin:2px 0 0;font-size:11px;">\uD83D\uDCCB Line-up confirmed' + (x.luBy !== 'Host' ? ' by ' + esc(x.luBy) : '') + '</div>';
+  else if (x.orderBy) h += '<div class="lv-sub" style="margin:2px 0 0;font-size:11px;">Fencers changed on the day by ' + esc(x.orderBy) + '</div>';
+  if (x.orderNote) h += '<div class="lv-sub" style="margin:2px 0 0;font-size:11px;">\uD83D\uDCDD ' + esc(x.orderNote) + '</div>';
   if (editFn && x.relay && !lvClosed(m, x)) h += '<button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="' + editFn + '(\'' + x.id + '\')">⇄ Change fencers</button>';
   return h + '</details>';
 }
@@ -7775,7 +7951,7 @@ function lvTeamsViewHtml(m, me){
   return (anyR ? '<div class="lv-sub" style="margin-top:0;"><b class="lv-pos">R</b> = reserve \u00b7 ' + (m.meta.reserves ? 'reserves fence in this event (all 4 fence)' : 'reserves sit out and only come in as a substitute') + '. A match can differ \u2014 its 9-bout order shows who fences.</div>' : '') +
     m.teams.map(function(t){
     return '<div class="lv-card"><div class="lv-team-head"><span class="lv-team-name">' + esc(t.name) + '</span><span class="lr-chip">' + t.members.length + '</span></div>' +
-      '<div class="lv-chips">' + t.members.map(function(f, i){ return '<span class="lv-chip' + (f.name===me?' sel':'') + '">' + (i === 3 ? '<b class="lv-pos">R</b>' : '') + (m.meta.checkin && m.checkins[f.id] ? '\u2713 ' : '') + esc(f.name) + (f.club ? ' <small>' + esc(f.club) + '</small>' : '') + (i === 3 ? ' <small>reserve</small>' : '') + '</span>'; }).join('') + '</div></div>';
+      '<div class="lv-chips">' + t.members.map(function(f, i){ return '<span class="lv-chip' + (f.name===me?' sel':'') + '">' + (i >= 3 ? '<b class="lv-pos">R</b>' : '') + (m.meta.checkin && m.checkins[f.id] ? '\u2713 ' : '') + esc(f.name) + (f.club ? ' <small>' + esc(f.club) + '</small>' : '') + (i >= 3 ? ' <small>reserve</small>' : '') + '</span>'; }).join('') + '</div></div>';
   }).join('');
 }
 function lvMyRows(m, me){
