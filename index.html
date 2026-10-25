@@ -718,6 +718,8 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
       <div class="hc-title">Fencing Live</div>
       <div class="hc-desc">Host an event or follow one live. Needs internet.</div>
     </button>
+    <button class="btn btn-gold btn-block lv-scanbtn" style="margin:0;" onclick="qrScanOpen()">&#128247; Scan QR code</button>
+    <div class="lv-sub" style="text-align:center;margin:-6px 0 0;">Event, check-in, referee, host or scoreboard-screen code: scan it and the right screen opens.</div>
   </div>
   <div class="app-links"></div>
   <div class="copy-line">© 2026 Portus Stellae Lab. All rights reserved.<br>Starport Fencing</div>
@@ -726,8 +728,6 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
 <section class="view" id="liveHome">
   <div class="lv-head"><button class="btn btn-ghost btn-sm" onclick="show('home')">&larr; Home</button><span class="logo-main" style="font-size:22px;">FENCING LIVE</span></div>
   <div id="lvNotice"></div>
-  <button class="btn btn-gold btn-block lv-scanbtn" onclick="qrScanOpen()">&#128247; Scan QR code</button>
-  <div class="lv-sub" style="text-align:center;margin:-2px 0 12px;">Fencers, referees and committee: scan the code you were given and the right screen opens.</div>
   <div class="lv-card">
     <div class="lv-team-name" style="margin-bottom:8px;">&#128064; View an event</div>
     <div style="display:flex;gap:8px;"><input id="lvCodeIn" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Event code"><button class="btn btn-gold" onclick="lvOpenViewFromInput()">Open</button></div>
