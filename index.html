@@ -8055,6 +8055,7 @@ function appCfgApply(){
   var n = APP_CFG && APP_CFG.notice, el = document.getElementById('appNote');
   if (el) el.innerHTML = (n && n.on && n.text) ? '<div class="app-note">📣 ' + esc(n.text) + '</div>' : '';
   var html = (appDonateOn() ? '<button class="app-link gold" onclick="donateOpen()">💛 Support this app</button>' : '') +
+             (appPartnerOn() ? '<button class="app-link gold" onclick="partnerOpen()">\uD83E\uDD1D Partner with us</button>' : '') +
              (appFeedbackOn() ? '<button class="app-link" onclick="fbOpen()">💬 Send feedback</button>' : '') +
              '<button class="app-link" onclick="appGuide()">📖 User guide</button>';
   var els = document.querySelectorAll('.app-links'); for (var i = 0; i < els.length; i++) els[i].innerHTML = html;
@@ -8081,6 +8082,27 @@ function donateFmt(t){
     if (tl && tl.length <= 40 && !/^[•\-*]/.test(tl) && !/[.,;:!]$/.test(tl)) return '<b class="dn-h">' + x + '</b>';
     return x;
   }).join('\n');
+}
+/* Partners & sponsors: shown in every version (no donation request, so it suits the store app too).
+   The Ko-fi / partners page link only shows where donations are allowed (the website). */
+function appPartnerOn(){ var p = APP_CFG && APP_CFG.partner; return !!(p && p.on !== false && (p.text || p.email)); }
+function partnerOpen(){
+  if (!appPartnerOn()) return;
+  var p = APP_CFG.partner, web = LIVE_PUBLIC_URL || lvBaseUrl();
+  var kofi = p.kofiUrl || ((APP_CFG.donate || {}).url) || '', page = p.pageUrl || (web ? web.replace(/\/?$/, '/') + 'partners.html' : '');
+  // the store app can't link to a donation page (Google Play rule for non-charities): it opens the website's Partners page, which links on to Ko-fi
+  var storeApp = isNative() && !((APP_CFG.donate || {}).inApp);
+  var more = storeApp ? (page ? { url:page, label:'Learn more: partners, shop & support' } : null) : (kofi ? { url:kofi, label:'Partners, shop & support on Ko-fi' } : (page ? { url:page, label:'Learn more' } : null));
+  function btn(href, label, gold){ return '<a class="btn ' + (gold ? 'btn-gold' : 'btn-ghost') + ' btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(href) + '"' + (/^mailto:/.test(href) ? '' : ' target="_blank" rel="noopener" onclick="return donateGo(this.href)"') + '>' + label + '</a>'; }
+  lvSheet('<div class="sheet-title">🤝 ' + esc(p.title || 'Partner with us') + '</div>' +
+    '<div class="dn-text">' + esc(p.text || '') + '</div>' +
+    '<div class="sheet-row" style="flex-direction:column;gap:8px;margin-top:0;">' +
+    (p.email ? btn('mailto:' + p.email + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) : '') +
+    (more ? btn(more.url, esc(more.label), false) : '') + '</div>' +
+    (web ? '<div class="lv-card" style="text-align:center;margin-top:12px;"><b>📱 Use Starport on any device</b><div class="lv-sub" style="margin:2px 0 6px;">Scan to open the web version on a phone, tablet or laptop.</div><div class="lv-qr"><img src="./web-qr.png" alt="QR code for the web version" style="width:180px;height:180px;display:block;margin:0 auto;border-radius:8px;"></div>' +
+      '<div style="word-break:break-all;font-size:14px;margin-top:6px;"><a href="' + esc(web) + '" target="_blank" rel="noopener" onclick="return donateGo(this.href)" style="color:var(--gold);">' + esc(web.replace(/^https?:\/\//, '')) + '</a></div>' +
+      '<div class="sheet-row" style="margin-top:8px;"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + esc(web) + '\')">Copy link</button></div></div>' : '') +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>');
 }
 function appGuide(sec){ try { location.href = './manual.html' + (sec ? '#' + sec : ''); } catch(e){} }
 function donateGo(u){ if (isNative()){ var B = capPlugin('Browser'); if (B && B.open){ B.open({ url:u }); return false; } } return true; }
