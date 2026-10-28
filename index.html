@@ -354,6 +354,24 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .lt-row.medal-g{background:rgba(201,162,39,.16);} .lt-row.medal-s{background:rgba(200,200,210,.10);} .lt-row.medal-b{background:rgba(205,127,50,.14);}
 /* big-screen scoreboard (📺 display) */
 #displayView{padding:0;background:#05090f;overflow:hidden;}
+#filmView{padding:0;background:#000;overflow:hidden;}
+.fm{position:fixed;inset:0;display:flex;flex-direction:column;background:#000;color:#fff;}
+.fm video{position:absolute;width:2px;height:2px;opacity:0;pointer-events:none;}
+.fm-stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;}
+.fm-stage canvas{max-width:100%;max-height:100%;display:block;}
+.fm-rec{position:absolute;top:10px;left:12px;color:#ff4d4d;font:600 14px 'DM Mono',monospace;text-shadow:0 1px 3px #000;}
+.fm-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#05090f;}
+.fm-net{font-size:12px;color:var(--muted);margin-right:auto;}
+.fm-recbtn{width:58px;height:58px;border-radius:50%;border:4px solid #fff;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+.fm-recbtn i{display:block;width:40px;height:40px;border-radius:50%;background:#e53935;transition:all .15s;}
+.fm-recbtn.on i{width:22px;height:22px;border-radius:5px;}
+.fm.ovl,html.ovl,html.ovl body,html.ovl #filmView{background:transparent!important;}
+.fm.ovl canvas{width:100vw;height:100vh;display:block;}
+.dv-lamp{position:absolute;top:0;bottom:0;width:3.2vw;opacity:.18;transition:opacity .15s;}
+.dv-lamp.l{left:0;background:#ff2a2a;} .dv-lamp.r{right:0;background:#22e06a;}
+.dv-lamp.on{opacity:1;box-shadow:0 0 6vw 2vw currentColor;}
+.dv-lamp.l.on{color:#ff2a2a;} .dv-lamp.r.on{color:#22e06a;}
+
 .dv{position:fixed;inset:0;display:flex;flex-direction:column;background:#05090f;color:var(--white);padding:2.2vh 3vw 2vh;user-select:none;}
 .dv-top{display:flex;justify-content:space-between;align-items:center;font-size:2.4vh;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;}
 .dv-top b{color:var(--gold);font-weight:600;}
@@ -744,8 +762,9 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
   </div>
   <div class="lv-card">
     <div class="lv-team-name" style="margin-bottom:8px;">&#128250; Scoreboard screen</div>
-    <div class="lv-sub" style="margin-top:0;">Turn an iPad, laptop or TV into a big scoreboard for a piste. The referee taps &#128250; on their scoreboard and you enter the code here (or scan its QR).</div>
-    <div style="display:flex;gap:8px;"><input id="dvCodeIn" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Screen code"><button class="btn btn-gold" onclick="dispOpenFromInput()">Show</button></div>
+    <div class="lv-sub" style="margin-top:0;">Turn an iPad, laptop or TV into a big scoreboard for a piste, or film the bout with the score on screen. The referee taps &#128250; on their scoreboard and you enter the code here (or scan its QR).</div>
+    <div style="display:flex;gap:8px;"><input id="dvCodeIn" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Screen code"><button class="btn btn-gold" onclick="dispOpenFromInput()">Show</button><button class="btn btn-ghost" onclick="filmOpenFromInput()" title="Film the bout with the live score">&#127909; Film</button></div>
+    <div class="lv-sub" style="margin-bottom:0;">&#127909; <b>Film</b> records the bout on this phone's camera with the live score along the bottom.</div>
   </div>
   <div id="lvRecent"></div>
   <div class="app-links"></div>
@@ -765,6 +784,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
 </section>
 
 <section class="view" id="displayView"><div class="dv" id="dvRoot"></div></section>
+<section class="view" id="filmView"><div class="fm" id="fmRoot"></div></section>
 
 <section class="view" id="setup">
   <div class="setup-head">
@@ -7515,7 +7535,7 @@ function qrScanFile(inp){
 function qrGot(text){
   text = String(text || '');
   var h = text.indexOf('#') >= 0 ? text.slice(text.indexOf('#')) : '';
-  if (!/(view|checkin|ref|host|bout|live|display)=/.test(h)){
+  if (!/(view|checkin|ref|host|bout|live|display|film|overlay)=/.test(h)){
     qrMsg('That QR code isn\u2019t a Starport Fencing code. Ask the host for the event QR.');
     try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){}
     return;
@@ -8030,6 +8050,8 @@ document.addEventListener('visibilitychange', function(){
 function lvHandleLink(){
   try {
     var h = String(location.hash || '');
+    var mf = h.match(/(film|overlay)=([A-Za-z0-9]{6})/);
+    if (mf){ try { history.replaceState(null, '', location.pathname); } catch(e){} filmOpen(mf[2].toUpperCase(), mf[1]); return true; }
     var md = h.match(/display=([A-Za-z0-9]{6})/);
     if (md){ try { history.replaceState(null, '', location.pathname); } catch(e){} dispOpen(md[1].toUpperCase()); return true; }
     var mc = h.match(/checkin=([A-Za-z0-9]{6})/);
@@ -8214,8 +8236,20 @@ function dispSheet(){
     '<div id="dispQr" class="lv-qr"></div>' +
     '<div class="lv-poster-n" style="text-align:center;font-size:44px;letter-spacing:6px;margin:4px 0;">' + esc(DISP.code) + '</div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + link + '\')">Copy link</button><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="dispFilmSheet()">🎥 Film this bout</button></div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" style="color:var(--red2);border-color:rgba(231,76,60,.4);" onclick="dispStop()">Stop this screen</button></div>');
   lvQrInto('dispQr', link, 200);
+}
+function dispFilmSheet(){
+  if (!DISP) return;
+  var link = filmLink(DISP.code), ov = overlayLink(DISP.code);
+  lvSheet('<div class="sheet-title">🎥 Film this bout ' + esc(DISP.code) + '</div>' +
+    '<div class="lv-sub" style="margin-top:0;">A fencer, coach or parent scans this QR to film the bout on their phone with the live score, timer and cards along the bottom. The side that scores lights up red or green. They can save the video or share it.</div>' +
+    '<div style="text-align:center;"><div id="filmQr" class="lv-qr"></div></div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + link + '\')">Copy film link</button><button class="btn btn-gold btn-block" onclick="dispSheet()">Back</button></div>' +
+    '<div class="lv-sub"><b>Live streaming:</b> in OBS or a streaming app, add a Browser source with the link below. It shows the score bar on a see-through background over your camera.</div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + ov + '\')">Copy streaming overlay link</button></div>');
+  lvQrInto('filmQr', link, 200);
 }
 function dispCreate(){
   DISP = { code:lvCode(), token:lvNonce() + lvNonce().slice(0, 8) };
@@ -8232,9 +8266,9 @@ function dispOpenFromInput(){ var c = String(lvVal('dvCodeIn') || '').trim().toU
 function dispOpen(code){
   if (!dispOk()){ toast('Big-screen scoreboards need Fencing Live (internet)'); return; }
   dispClose();
-  DV = { code:code, st:null, recv:0, net:'', tick:null, stream:null };
+  DV = { code:code, st:null, recv:0, net:'', tick:null, stream:null, ht:{} };
   show('displayView'); requestWake();
-  DV.stream = lvStream('/displays/' + code, function(tree){ DV.st = tree; DV.recv = Date.now(); dispRender(); }, function(n){ DV.net = n; dispRender(); });
+  DV.stream = lvStream('/displays/' + code, function(tree){ if (!DV) return; DV.st = tree; DV.recv = Date.now(); hitTrack(DV.ht, tree, Date.now()); dispRender(); }, function(n){ DV.net = n; dispRender(); });
   DV.tick = setInterval(dispRender, 250);
   dispRender();
 }
@@ -8270,6 +8304,8 @@ function dispRender(){
     '<div class="dv-cards"><span>' + cards(st.L) + '</span><span>' + cards(st.R) + '</span></div>';
   if (st.done) html += '<div class="dv-win">🏆 ' + esc(st.winner) + '</div>';
   if (st.brk && !st.done) html += '<div class="dv-brk"><div>BREAK</div><div class="dv-clock">' + dispClock(st.brk.running ? st.brk.s - el : st.brk.s) + '</div></div>';
+  var nw = Date.now();
+  html += '<div class="dv-lamp l' + (hitOn(DV.ht, 'L', nw) ? ' on' : '') + '"></div><div class="dv-lamp r' + (hitOn(DV.ht, 'R', nw) ? ' on' : '') + '"></div>';
   root.innerHTML = html + foot;
 }
 (function(){
@@ -8278,6 +8314,257 @@ function dispRender(){
   var rB = renderBreak; renderBreak = function(){ rB.apply(this, arguments); dispMaybe(); };
   var sB = stopBreak; stopBreak = function(){ sB.apply(this, arguments); dispMaybe(); };
   var sh = show; show = function(id){ if (id !== 'displayView' && DV) dispClose(); sh.apply(this, arguments); if (DISP && id !== 'displayView') setTimeout(function(){ dispMaybe(); }, 60); if (id === 'scoring') dispBtnState(); };
+})();
+
+/* ----- 🎥 Film a bout with the live score (and a streaming overlay) ----- */
+var FM = null;
+function filmLink(code){ var b = lvBaseUrl(); return b ? b + '#film=' + code : ''; }
+function overlayLink(code){ var b = lvBaseUrl(); return b ? b + '#overlay=' + code : ''; }
+/* Touch lights: light the side that scored (or, later, the side a wireless box reports). */
+function hitTrack(o, st, now){
+  o.flash = o.flash || { L:0, R:0 };
+  if (!st || st.idle || st.ended || !st.L || !st.R){ o.prev = null; return o.flash; }
+  var key = st.L.name + '|' + st.R.name, p = o.prev;
+  if (p && p.key === key){
+    if (st.hit){
+      if (st.hit.L && st.hit.L !== p.hL) o.flash.L = now;
+      if (st.hit.R && st.hit.R !== p.hR) o.flash.R = now;
+    } else {
+      if (st.L.score > p.L) o.flash.L = now;
+      if (st.R.score > p.R) o.flash.R = now;
+    }
+  }
+  o.prev = { key:key, L:st.L.score, R:st.R.score, hL:st.hit && st.hit.L, hR:st.hit && st.hit.R };
+  return o.flash;
+}
+function hitOn(o, side, now){ return !!(o && o.flash && o.flash[side] && now - o.flash[side] < 1600); }
+function filmOpen(code, mode){
+  if (!dispOk()){ toast('Filming with the live score needs Fencing Live (internet)'); return; }
+  filmClose();
+  FM = { code:code, mode:mode || 'film', st:null, recv:0, net:'', cam:null, sub:null, raf:0, rec:null, chunks:[], recAt:0, facing:'environment', mic:true, ht:{} };
+  if (FM.mode === 'overlay') document.documentElement.classList.add('ovl');
+  show('filmView');
+  var root = document.getElementById('fmRoot');
+  root.className = 'fm' + (FM.mode === 'overlay' ? ' ovl' : '');
+  root.innerHTML = FM.mode === 'overlay' ? '<canvas id="fmCanvas"></canvas>' :
+    '<video id="fmVideo" playsinline muted autoplay></video><div class="fm-stage"><canvas id="fmCanvas"></canvas><div class="fm-rec" id="fmRecTag"></div></div>' +
+    '<div class="fm-bar"><span class="fm-net" id="fmNet"></span>' +
+      '<button class="btn btn-ghost btn-sm" onclick="filmFlip()" title="Switch camera">⟲</button>' +
+      '<button class="btn btn-ghost btn-sm" id="fmMic" onclick="filmMicToggle()">🎙 On</button>' +
+      '<button class="fm-recbtn" id="fmRecBtn" onclick="filmRecToggle()" aria-label="Record"><i></i></button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="filmExit()">Exit</button></div>';
+  FM.canvas = document.getElementById('fmCanvas'); FM.ctx = FM.canvas.getContext('2d');
+  FM.sub = lvStream('/displays/' + code, function(tree){ if (!FM) return; FM.st = tree; FM.recv = Date.now(); hitTrack(FM.ht, tree, Date.now()); }, function(n){ if (FM){ FM.net = n; filmNet(); } });
+  requestWake();
+  if (FM.mode === 'film') filmCam(); 
+  filmLoop();
+}
+function filmNet(){ var e = document.getElementById('fmNet'); if (e && FM) e.textContent = FM.code + ' · ' + (FM.net === 'live' ? '● live' : (FM.net === 'offline' ? '○ offline' : '○ connecting')); }
+function filmCam(){
+  if (!FM) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('This browser can’t use the camera here'); return; }
+  if (FM.cam){ FM.cam.getTracks().forEach(function(t){ t.stop(); }); FM.cam = null; }
+  var v = { facingMode:FM.facing, width:{ ideal:1280 }, height:{ ideal:720 } };
+  var ok = function(s){ if (!FM){ s.getTracks().forEach(function(t){ t.stop(); }); return; } FM.cam = s; var el = document.getElementById('fmVideo'); el.srcObject = s; el.play && el.play().catch(function(){}); filmMicLabel(); };
+  navigator.mediaDevices.getUserMedia({ video:v, audio:FM.mic }).then(ok, function(){
+    if (!FM) return;
+    if (FM.mic){ FM.mic = false; navigator.mediaDevices.getUserMedia({ video:v, audio:false }).then(function(s){ ok(s); toast('Recording without sound (no microphone permission)'); }, function(){ toast('Allow the camera to film the bout'); }); }
+    else toast('Allow the camera to film the bout');
+  });
+}
+function filmFlip(){ if (!FM) return; if (FM.rec){ toast('Stop recording to switch camera'); return; } FM.facing = FM.facing === 'environment' ? 'user' : 'environment'; filmCam(); }
+function filmMicLabel(){ var b = document.getElementById('fmMic'); if (b && FM) b.textContent = FM.mic ? '🎙 On' : '🎙 Off'; }
+function filmMicToggle(){ if (!FM) return; if (FM.rec){ toast('Stop recording to change sound'); return; } FM.mic = !FM.mic; filmCam(); filmMicLabel(); }
+function filmLoop(){
+  if (!FM) return;
+  FM.raf = requestAnimationFrame(filmLoop);
+  var c = FM.canvas, ctx = FM.ctx, now = Date.now();
+  if (FM.mode === 'overlay'){
+    var dpr = window.devicePixelRatio || 1, W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
+    if (c.width !== W || c.height !== H){ c.width = W; c.height = H; }
+    ctx.clearRect(0, 0, W, H);
+    filmDrawScore(ctx, W, H, now, true);
+    return;
+  }
+  var v = document.getElementById('fmVideo'), vw = v && v.videoWidth, vh = v && v.videoHeight;
+  if (!FM.rec && vw && vh){
+    var sc = Math.min(1, 1280 / Math.max(vw, vh)), cw = Math.round(vw * sc / 2) * 2, ch = Math.round(vh * sc / 2) * 2;
+    if (c.width !== cw || c.height !== ch){ c.width = cw; c.height = ch; }
+  }
+  if (!c.width){ c.width = 1280; c.height = 720; }
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, c.width, c.height);
+  if (vw && vh){
+    var s = Math.min(c.width / vw, c.height / vh), dw = vw * s, dh = vh * s;
+    try { ctx.drawImage(v, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh); } catch(e){}
+  }
+  filmDrawScore(ctx, c.width, c.height, now, false);
+  if (FM.rec){ var t = document.getElementById('fmRecTag'); if (t) t.textContent = '● REC ' + dispClock((now - FM.recAt) / 1000); }
+}
+function filmFit(ctx, text, size, maxW, family){
+  var f = size;
+  ctx.font = f + 'px ' + family;
+  while (f > 8 && ctx.measureText(text).width > maxW){ f -= 1; ctx.font = f + 'px ' + family; }
+  return f;
+}
+function filmDrawScore(ctx, W, H, now, overlay){
+  var st = FM.st, el = Math.floor((now - FM.recv) / 1000);
+  var bh = Math.round(Math.max(48, Math.min(H * 0.15, W * 0.085))), y = H - bh - (overlay ? Math.round(H * 0.04) : 0);
+  var x0 = overlay ? Math.round(W * 0.04) : 0, bw = W - 2 * x0;
+  var BEB = '"Bebas Neue", Impact, sans-serif', SANS = '"DM Sans", system-ui, sans-serif', MONO = '"DM Mono", ui-monospace, monospace';
+  var fL = hitOn(FM.ht, 'L', now), fR = hitOn(FM.ht, 'R', now);
+  /* side glow over the picture when a touch lands */
+  if (fL || fR){
+    var gw = Math.round(W * 0.06);
+    if (fL){ var gl = ctx.createLinearGradient(0, 0, gw, 0); gl.addColorStop(0, 'rgba(235,40,40,.75)'); gl.addColorStop(1, 'rgba(235,40,40,0)'); ctx.fillStyle = gl; ctx.fillRect(0, 0, gw, y); }
+    if (fR){ var gr = ctx.createLinearGradient(W, 0, W - gw, 0); gr.addColorStop(0, 'rgba(40,210,90,.75)'); gr.addColorStop(1, 'rgba(40,210,90,0)'); ctx.fillStyle = gr; ctx.fillRect(W - gw, 0, gw, y); }
+  }
+  ctx.fillStyle = 'rgba(5,9,15,.86)'; ctx.fillRect(x0, y, bw, bh);
+  var lw = Math.round(bh * 0.22);
+  ctx.fillStyle = fL ? '#ff2a2a' : '#3a1515'; ctx.fillRect(x0, y, lw, bh);
+  ctx.fillStyle = fR ? '#22e06a' : '#123a22'; ctx.fillRect(x0 + bw - lw, y, lw, bh);
+  ctx.textBaseline = 'middle';
+  if (!st || st.idle || st.ended || !st.L){
+    ctx.fillStyle = '#c9a227'; ctx.textAlign = 'center';
+    filmFit(ctx, st && st.ended ? 'SCOREBOARD STOPPED' : 'WAITING FOR THE SCOREBOARD · ' + FM.code, Math.round(bh * 0.42), bw - 2 * lw - 20, BEB);
+    ctx.fillText(st && st.ended ? 'SCOREBOARD STOPPED' : 'WAITING FOR THE SCOREBOARD · ' + FM.code, x0 + bw / 2, y + bh / 2);
+    return;
+  }
+  var sw = Math.round(bh * 1.15), cx = x0 + bw / 2, midW = Math.round(bh * 2.2);
+  /* score boxes */
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(x0 + lw, y, sw, bh);
+  ctx.fillStyle = '#2f7fd6'; ctx.fillRect(x0 + bw - lw - sw, y, sw, bh);
+  ctx.textAlign = 'center'; ctx.font = Math.round(bh * 0.86) + 'px ' + BEB;
+  ctx.fillStyle = '#111'; ctx.fillText(String(st.L.score), x0 + lw + sw / 2, y + bh * 0.54);
+  ctx.fillStyle = '#fff'; ctx.fillText(String(st.R.score), x0 + bw - lw - sw / 2, y + bh * 0.54);
+  /* names */
+  var nmW = (bw - 2 * lw - 2 * sw - midW) / 2 - bh * 0.3;
+  function nm(sd, right){
+    var x = right ? x0 + bw - lw - sw - bh * 0.18 : x0 + lw + sw + bh * 0.18, aff = [sd.country, sd.club].filter(Boolean).join(' · ');
+    ctx.textAlign = right ? 'right' : 'left';
+    ctx.fillStyle = '#fff'; filmFit(ctx, String(sd.name || '').toUpperCase(), Math.round(bh * (aff ? 0.44 : 0.52)), nmW, BEB);
+    ctx.fillText(String(sd.name || '').toUpperCase(), x, y + bh * (aff ? 0.36 : 0.52));
+    if (aff){ ctx.fillStyle = '#a9b8cc'; filmFit(ctx, aff, Math.round(bh * 0.2), nmW, SANS); ctx.fillText(aff, x, y + bh * 0.74); }
+    var cards = [], i;
+    for (i = 0; i < (sd.y | 0); i++) cards.push('#f1c40f');
+    for (i = 0; i < (sd.r | 0); i++) cards.push('#e53935');
+    var cwid = bh * 0.12, chgt = bh * 0.18, cy = y + bh * 0.06;
+    cards.slice(0, 4).forEach(function(col, k){ ctx.fillStyle = col; var cx2 = right ? x - (k + 1) * (cwid + 3) : x + k * (cwid + 3); ctx.fillRect(cx2, cy, cwid, chgt); });
+  }
+  nm(st.L, false); nm(st.R, true);
+  /* middle: clock / break / final */
+  ctx.textAlign = 'center';
+  var sub = st.relay ? 'BOUT ' + st.relay.n + '/' + st.relay.of + '  ' + st.relay.pL + '–' + st.relay.pR : (st.periods > 1 ? 'PERIOD ' + st.period + '/' + st.periods : String(st.weapon || '').toUpperCase());
+  if (st.done){
+    ctx.fillStyle = '#c9a227'; filmFit(ctx, 'FINAL', Math.round(bh * 0.5), midW, BEB); ctx.fillText('FINAL', cx, y + bh * 0.4);
+    ctx.fillStyle = '#a9b8cc'; filmFit(ctx, String(st.winner || ''), Math.round(bh * 0.22), midW, SANS); ctx.fillText(String(st.winner || ''), cx, y + bh * 0.78);
+  } else if (st.brk){
+    var bs = st.brk.running ? st.brk.s - el : st.brk.s;
+    ctx.fillStyle = '#c9a227'; ctx.font = Math.round(bh * 0.2) + 'px ' + SANS; ctx.fillText('BREAK', cx, y + bh * 0.24);
+    ctx.font = Math.round(bh * 0.44) + 'px ' + MONO; ctx.fillText(dispClock(bs), cx, y + bh * 0.62);
+  } else {
+    var clk = st.running ? st.clock - el : st.clock;
+    ctx.fillStyle = st.running ? (clk <= 10 ? '#ff5a4f' : '#4cd37b') : '#fff';
+    ctx.font = Math.round(bh * 0.46) + 'px ' + MONO; ctx.fillText(dispClock(clk), cx, y + bh * 0.4);
+    ctx.fillStyle = '#a9b8cc'; filmFit(ctx, sub, Math.round(bh * 0.18), midW, SANS); ctx.fillText(sub, cx, y + bh * 0.8);
+  }
+  /* small brand mark */
+  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = Math.round(bh * 0.17) + 'px ' + BEB;
+  ctx.fillText('STARPORT FENCING' + (st.piste ? ' · PISTE ' + st.piste : ''), x0 + bw - lw - 6, y - bh * 0.16);
+}
+function filmMime(){
+  var list = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  if (!window.MediaRecorder) return null;
+  for (var i = 0; i < list.length; i++){ try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch(e){} }
+  return '';
+}
+function filmRecToggle(){ if (!FM) return; if (FM.rec) filmRecStop(); else filmRecStart(); }
+function filmRecStart(){
+  var mime = filmMime();
+  if (mime === null || !FM.canvas.captureStream){ toast('This browser can’t record video. Try Chrome, or the Android app.'); return; }
+  if (!FM.cam){ toast('Waiting for the camera…'); return; }
+  var out = FM.canvas.captureStream(30);
+  if (FM.mic) FM.cam.getAudioTracks().forEach(function(t){ out.addTrack(t); });
+  var rec;
+  try { rec = new MediaRecorder(out, mime ? { mimeType:mime, videoBitsPerSecond:3500000 } : { videoBitsPerSecond:3500000 }); }
+  catch(e){ toast('Could not start recording'); return; }
+  FM.chunks = []; FM.rec = rec; FM.recAt = Date.now(); FM.mimeUsed = rec.mimeType || mime || 'video/webm';
+  rec.ondataavailable = function(e){ if (e.data && e.data.size) FM.chunks.push(e.data); };
+  rec.onstop = function(){ filmRecDone(); };
+  rec.start(1000);
+  var b = document.getElementById('fmRecBtn'); if (b) b.classList.add('on');
+  haptic(false);
+}
+function filmRecStop(){
+  if (!FM || !FM.rec) return;
+  try { FM.rec.stop(); } catch(e){ filmRecDone(); }
+  var b = document.getElementById('fmRecBtn'); if (b) b.classList.remove('on');
+  var t = document.getElementById('fmRecTag'); if (t) t.textContent = '';
+}
+function filmName(ext){
+  var st = FM && FM.st, nm = st && st.L ? st.L.name + '-vs-' + st.R.name : 'bout';
+  var d = new Date(), p = function(n){ return String(n).padStart(2, '0'); };
+  return ('Starport_' + nm + '_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.' + ext).replace(/[^A-Za-z0-9._-]+/g, '_');
+}
+function filmRecDone(){
+  if (!FM || !FM.rec) return;
+  var type = String(FM.mimeUsed || 'video/webm').split(';')[0], blob = new Blob(FM.chunks, { type:type });
+  FM.rec = null; FM.chunks = []; FM.last = { blob:blob, name:filmName(type.indexOf('mp4') >= 0 ? 'mp4' : 'webm') };
+  var mb = (blob.size / 1048576).toFixed(1);
+  lvSheet('<div class="sheet-title">🎥 Video ready</div><div class="lv-sub" style="margin-top:0;">' + esc(FM.last.name) + ' · ' + mb + ' MB</div>' +
+    '<div class="lv-sub">' + (isNative() ? 'Tap Save or share, then choose Photos, Drive, Files or an app.' : 'Save it to this device, or share it straight to an app.') + '</div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="filmDiscard()">Delete</button><button class="btn btn-gold btn-block" onclick="filmSave()">Save or share</button></div>');
+}
+function filmDiscard(){ if (FM) FM.last = null; lvCloseSheet(); }
+function filmSave(){
+  var L = FM && FM.last; if (!L) return;
+  if (isNative() && capPlugin('Filesystem') && capPlugin('Share')){
+    var FS = capPlugin('Filesystem'), SH = capPlugin('Share'), step = 3 * 1024 * 1024, pos = 0, uri = null;
+    toast('Preparing video…');
+    var next = function(){
+      if (pos >= L.blob.size){ SH.share({ title:'Starport Fencing bout', files:[uri] }).catch(function(){}); lvCloseSheet(); return; }
+      var part = L.blob.slice(pos, pos + step), r = new FileReader();
+      r.onload = function(){
+        var b64 = String(r.result).split(',')[1] || '', first = pos === 0;
+        var p = first ? FS.writeFile({ path:L.name, data:b64, directory:'CACHE' }) : FS.appendFile({ path:L.name, data:b64, directory:'CACHE' });
+        p.then(function(res){ if (first) uri = res.uri; pos += step; next(); }).catch(function(){ toast('Could not save the video'); });
+      };
+      r.onerror = function(){ toast('Could not save the video'); };
+      r.readAsDataURL(part);
+    };
+    next();
+    return;
+  }
+  var file = null;
+  try { file = new File([L.blob], L.name, { type:L.blob.type }); } catch(e){}
+  if (file && navigator.canShare && navigator.canShare({ files:[file] }) && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)){
+    navigator.share({ files:[file], title:'Starport Fencing bout' }).then(function(){ lvCloseSheet(); }).catch(function(){});
+    return;
+  }
+  var url = URL.createObjectURL(L.blob), a = document.createElement('a');
+  a.href = url; a.download = L.name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  toast('Video saved'); lvCloseSheet();
+}
+function filmClose(){
+  if (!FM) return;
+  if (FM.rec){ try { FM.rec.onstop = null; FM.rec.stop(); } catch(e){} }
+  cancelAnimationFrame(FM.raf);
+  try { FM.sub && FM.sub.close && FM.sub.close(); } catch(e){}
+  if (FM.cam) FM.cam.getTracks().forEach(function(t){ t.stop(); });
+  document.documentElement.classList.remove('ovl');
+  FM = null; releaseWake();
+}
+function filmExit(){
+  if (FM && FM.rec){
+    lvSheet('<div class="sheet-title">Still recording</div><div class="lv-sub" style="margin-top:0;">Stop and keep the video first?</div>' +
+      '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet();filmClose();goLive();">Discard and exit</button><button class="btn btn-gold btn-block" onclick="lvCloseSheet();filmRecStop();">Stop recording</button></div>');
+    return;
+  }
+  filmClose(); goLive();
+}
+function filmOpenFromInput(){ var c = String(lvVal('dvCodeIn') || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length !== 6){ toast('Screen codes have 6 characters'); return; } filmOpen(c, 'film'); }
+(function(){
+  var sh = show; show = function(id){ if (id !== 'filmView' && FM) filmClose(); sh.apply(this, arguments); };
 })();
 
 /* Boot: on native, restore any storage the WebView may have evicted. */
