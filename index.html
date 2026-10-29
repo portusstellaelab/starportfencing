@@ -357,16 +357,37 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 #filmView{padding:0;background:#000;overflow:hidden;}
 .fmv{position:fixed;inset:0;display:flex;flex-direction:column;background:#000;color:#fff;}
 .fmv video{position:absolute;width:2px;height:2px;opacity:0;pointer-events:none;}
-.fm-stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;}
-.fm-stage canvas{max-width:100%;max-height:100%;display:block;}
-.fm-tip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(5,9,15,.78);border:1px solid rgba(201,162,39,.6);color:#fff;border-radius:12px;padding:10px 14px;font-size:14px;text-align:center;max-width:80%;pointer-events:none;display:none;}
+.fm-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;}
+.fm-stage canvas{width:100%;height:100%;display:block;object-fit:contain;}
+.fm-tip{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;padding:10px 14px;font-size:14px;text-align:center;max-width:70%;pointer-events:none;display:none;}
 .fm-tip.on{display:block;}
-.fm-rec{position:absolute;top:10px;left:12px;color:#ff4d4d;font:600 14px 'DM Mono',monospace;text-shadow:0 1px 3px #000;}
-.fm-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#05090f;}
-.fm-net{font-size:12px;color:var(--muted);margin-right:auto;}
-.fm-recbtn{width:58px;height:58px;border-radius:50%;border:4px solid #fff;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
-.fm-recbtn i{display:block;width:40px;height:40px;border-radius:50%;background:#e53935;transition:all .15s;}
-.fm-recbtn.on i{width:22px;height:22px;border-radius:5px;}
+.fm-top{position:absolute;top:calc(8px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right));display:flex;align-items:center;gap:8px;z-index:3;pointer-events:none;}
+.fm-top > *{pointer-events:auto;}
+.fm-net{font-size:12px;color:#fff;background:rgba(0,0,0,.45);border-radius:20px;padding:5px 10px;}
+.fm-rec{color:#fff;background:#e53935;border-radius:20px;padding:4px 10px;font:600 13px 'DM Mono',monospace;display:none;}
+.fm-rec.on{display:inline-block;} .fm-rec.pause{background:#8a6d0e;}
+.fm-sp{flex:1;}
+.fm-ctl{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(54px + env(safe-area-inset-top));bottom:max(17%,70px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:3;}
+@media (max-height:520px){.fm-ctl{gap:6px;bottom:19%;} .fm-b{width:40px;height:40px;font-size:15px;} .fm-b small{font-size:8px;} .fm-recbtn{width:52px;height:52px;border-width:3px;} .fm-recbtn i{width:36px;height:36px;} .fm-recbtn.on i{width:20px;height:20px;}}
+.fm-b{width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.45);color:#fff;font:600 18px/1 'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
+.fm-b small{font-size:9px;font-weight:600;letter-spacing:.02em;opacity:.9;}
+.fm-b.on{background:rgba(201,162,39,.85);border-color:#c9a227;color:#111;}
+.fm-b.top{width:auto;height:34px;border-radius:18px;padding:0 12px;font-size:13px;flex-direction:row;}
+.fm-recbtn{width:64px;height:64px;border-radius:50%;border:4px solid #fff;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+.fm-recbtn i{display:block;width:44px;height:44px;border-radius:50%;background:#ff3b30;transition:all .15s;}
+.fm-recbtn.on i{width:24px;height:24px;border-radius:5px;}
+.fm-rp{position:absolute;inset:0;background:#000;z-index:5;display:none;}
+.fm-rp.on{display:block;}
+.fm-rp canvas{width:100%;height:100%;display:block;object-fit:contain;}
+.fm-rpbar{position:absolute;left:0;right:0;bottom:0;padding:10px calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));background:linear-gradient(transparent,rgba(0,0,0,.85));display:flex;flex-direction:column;gap:8px;}
+.fm-rprow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.fm-rprow input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:120px;height:6px;padding:0;margin:0 6px;border:0;border-radius:3px;background:rgba(255,255,255,.35);box-shadow:none;}
+.fm-rprow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#c9a227;border:2px solid #fff;}
+.fm-rprow input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#c9a227;border:2px solid #fff;}
+.fm-chip{border:1px solid rgba(255,255,255,.4);background:rgba(0,0,0,.4);color:#fff;border-radius:18px;padding:7px 12px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;}
+.fm-chip.on{background:#c9a227;border-color:#c9a227;color:#111;}
+.fm-chip:disabled{opacity:.4;}
+.fm-rphead{position:absolute;top:calc(10px + env(safe-area-inset-top));left:12px;right:12px;display:flex;justify-content:space-between;color:#fff;font:600 14px 'DM Sans',sans-serif;text-shadow:0 1px 3px #000;}
 .fmv.ovl,html.ovl,html.ovl body,html.ovl #filmView{background:transparent!important;}
 .fmv.ovl canvas{width:100vw;height:100vh;display:block;}
 .dv-lamp{position:absolute;top:0;bottom:0;width:3.2vw;opacity:.18;transition:opacity .15s;}
@@ -8143,7 +8164,7 @@ function commTabs(){
   if (appAppeals().length) t.push(['appeals', 'Appeals']);
   t.push(['pioneers', ((APP_CFG && APP_CFG.pioneers && APP_CFG.pioneers.title) || 'Starport Pioneers Program').replace(/^Starport\s+/i, '')]);
   if (appPartnerOn()) t.push(['partners', 'Partners']);
-  if (((APP_CFG && APP_CFG.athletes) || []).length) t.push(['athletes', 'Athletes']);
+  t.push(['athletes', 'Athletes']);
   return t;
 }
 function commOpen(tab){
@@ -8171,12 +8192,22 @@ function commAppeals(){
     L.map(appealHtml).join('') +
     (appCanPay() ? '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="donateOpen()">💛 About our cause &amp; donations</button></div>' : '');
 }
-function commPartners(){ return partnerHtml(); }
+function commPartners(){
+  var store = pxStore(), partners = (APP_CFG.partners || []).slice();
+  if (!partners.length) (APP_CFG.offers || []).forEach(function(o){ if (!partners.some(function(x){ return x.name === o.partner; })) partners.push({ name:o.partner, kind:'Community partner' }); });
+  return '<div class="lv-sub" style="margin-top:0;">Thank you to the businesses and services supporting our athletes and the Starport Pioneers Program.</div>' +
+    '<div class="lv-card"><div class="lv-team-name">Our partners</div>' +
+      (partners.length ? partners.map(function(x){ var nm = x.url && !store ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener" onclick="return donateGo(this.href)">' + esc(x.name) + '</a>' : esc(x.name); return '<div class="ap-item"><span><b>' + nm + '</b>' + (x.kind ? '<br><em>' + esc(x.kind) + '</em>' : '') + '</span></div>'; }).join('')
+        : '<div class="lv-sub" style="margin-bottom:0;">Become our first partner: your name could be the first one here.</div>') + '</div>' +
+    pxRow(pxBtn('mailto:' + pxEmail() + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) + pxKofiBtn() +
+      (appPartnerOn() ? '<button class="btn btn-ghost btn-block" onclick="partnerOpen()">🤝 How we partner: levels &amp; benefits</button>' : ''));
+}
 function commAthletes(){
   var L = (APP_CFG.athletes || []);
-  return '<div class="lv-sub" style="margin-top:0;">Athletes we support. Each athlete chose to be listed here.</div>' +
-    L.map(function(a){ return '<div class="lv-card"><div class="lv-team-name">' + esc(a.name) + '</div><div class="lv-sub" style="margin:2px 0 0;">' + esc([a.sport, a.goal].filter(Boolean).join(' · ')) + '</div></div>'; }).join('') +
-    '<div class="lv-sub">Are you an athlete who needs support, or ready for sponsors? Email ' + esc((APP_CFG.partner || {}).email || 'portusstellaelab@gmail.com') + '.</div>';
+  return '<div class="lv-sub" style="margin-top:0;">' + (L.length ? 'Athletes we support. Each athlete chose to be listed here.' : 'Athletes we support will be listed here, each with their permission.') + '</div>' +
+    L.map(function(a){ return '<div class="lv-card"><div class="lv-team-name">' + esc(a.name) + '</div><div class="lv-sub" style="margin:2px 0 0;">' + esc([a.sport, a.goal].filter(Boolean).join(' \u00b7 ')) + '</div></div>'; }).join('') +
+    '<div class="lv-card"><div class="lv-team-name">Are you an athlete?</div><div class="lv-sub" style="margin-bottom:0;">Whether you need support to keep competing, or you\u2019re ready for sponsors, tell us about your sport and your goals.</div></div>' +
+    pxRow(pxBtn('mailto:' + pxEmail() + '?subject=' + encodeURIComponent('Athlete support - Starport Fencing'), '✉ Email us', true) + pxKofiBtn());
 }
 /* --- Starport Pioneers --- */
 function pioCfg(){ return (APP_CFG && APP_CFG.pioneers) || { open:false, spots:20, title:'Starport Pioneers Program', text:'' }; }
@@ -8302,25 +8333,24 @@ function donateFmt(t){
 /* Partners & sponsors: shown in every version (no donation request, so it suits the store app too).
    The Ko-fi / partners page link only shows where donations are allowed (the website). */
 function appPartnerOn(){ var p = APP_CFG && APP_CFG.partner; return !!(p && p.on !== false && (p.text || p.email)); }
+/* shared bits for Partner with us and the Community tabs */
+function pxStore(){ return isNative() && !((APP_CFG.donate || {}).inApp); }   // store app: no outside payment links (Google Play rule for non-charities)
+function pxKofi(){ var p = APP_CFG.partner || {}; return p.kofiUrl || ((APP_CFG.donate || {}).url) || ''; }
+function pxEmail(){ return (APP_CFG.partner || {}).email || 'portusstellaelab@gmail.com'; }
+function pxBtn(href, label, gold){ return '<a class="btn ' + (gold ? 'btn-gold' : 'btn-ghost') + ' btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(href) + '"' + (/^mailto:/.test(href) ? '' : ' target="_blank" rel="noopener" onclick="return donateGo(this.href)"') + '>' + label + '</a>'; }
+function pxKofiBtn(){ var k = pxKofi(); return k && !pxStore() ? pxBtn(k, '💛 Support us on Ko-fi', false) : ''; }
+function pxKofiNote(){
+  return pxStore() ? '<div class="lv-sub" style="text-align:center;margin:8px 0 0;">Our partners and the athletes we support are listed in 🌟 Community.</div>'
+    : '<div class="lv-sub" style="text-align:center;margin:8px 0 0;">Our Ko-fi page lists our partners and the athletes we support. Merchandise is coming soon, and all profits go to supporting athletes.</div>';
+}
+function pxRow(html){ return html ? '<div class="sheet-row" style="flex-direction:column;gap:8px;margin-top:0;">' + html + '</div>' : ''; }
+/* 🤝 Partner with us (home screen): the full pitch, no lists */
 function partnerHtml(){
-  var p = APP_CFG.partner || {};
-  var kofi = p.kofiUrl || ((APP_CFG.donate || {}).url) || '';
-  // the store app can't link to an outside payment page (Google Play rule for non-charities), so it leaves out the Ko-fi button
-  var storeApp = isNative() && !((APP_CFG.donate || {}).inApp);
-  function btn(href, label, gold){ return '<a class="btn ' + (gold ? 'btn-gold' : 'btn-ghost') + ' btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(href) + '"' + (/^mailto:/.test(href) ? '' : ' target="_blank" rel="noopener" onclick="return donateGo(this.href)"') + '>' + label + '</a>'; }
-  var buttons = (p.email ? btn('mailto:' + p.email + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) : '') +
-    (kofi && !storeApp ? btn(kofi, 'Partners, shop &amp; support on Ko-fi', false) : '');
-  var partners = (APP_CFG.partners || []).slice();
-  if (!partners.length) (APP_CFG.offers || []).forEach(function(o){ if (!partners.some(function(x){ return x.name === o.partner; })) partners.push({ name:o.partner, kind:'Community partner' }); });
-  var ath = APP_CFG.athletes || [];
+  var p = APP_CFG.partner || {}, web = LIVE_PUBLIC_URL || lvBaseUrl(), page = p.pageUrl || (web ? web.replace(/\/?$/, '/') + 'partners.html' : '');
   return (p.text ? '<div class="dn-text">' + donateFmt(p.text) + '</div>' : '') +
     (p.how ? '<div class="dn-text">' + donateFmt(p.how) + '</div>' : '') +
-    (buttons ? '<div class="sheet-row" style="flex-direction:column;gap:8px;margin-top:0;">' + buttons + '</div>' : '') +
-    '<div class="lv-card" style="margin-top:14px;"><div class="lv-team-name">Our partners</div>' +
-      (partners.length ? partners.map(function(x){ var nm = x.url && !storeApp ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener" onclick="return donateGo(this.href)">' + esc(x.name) + '</a>' : esc(x.name); return '<div class="ap-item"><span><b>' + nm + '</b>' + (x.kind ? '<br><em>' + esc(x.kind) + '</em>' : '') + '</span></div>'; }).join('')
-        : '<div class="lv-sub" style="margin-bottom:0;">Become our first partner: your name could be the first one here.</div>') + '</div>' +
-    (ath.length ? '<div class="lv-card"><div class="lv-team-name">Athletes we support</div><div class="lv-sub" style="margin:4px 0 0;">Each athlete chose to be listed here.</div>' +
-      ath.map(function(a){ return '<div class="ap-item"><span><b>' + esc(a.name) + '</b><br><em>' + esc([a.sport, a.goal].filter(Boolean).join(' \u00b7 ')) + '</em></span></div>'; }).join('') + '</div>' : '');
+    pxRow((p.email ? pxBtn('mailto:' + p.email + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) : '') + pxKofiBtn() +
+      (page ? pxBtn(page, 'Our full Partners page (to share)', false) : '')) + pxKofiNote();
 }
 function partnerOpen(){
   if (!appPartnerOn()) return;
@@ -8551,23 +8581,28 @@ function hitOn(o, side, now){ return !!(o && o.flash && o.flash[side] && now - o
 function filmOpen(code, mode){
   if (!dispOk()){ toast('Filming with the live score needs Fencing Live (internet)'); return; }
   filmClose();
-  FM = { code:code, mode:mode || 'film', st:null, recv:0, net:'', cam:null, sub:null, raf:0, rec:null, chunks:[], recAt:0, facing:'environment', mic:true, ht:{} };
+  FM = { code:code, mode:mode || 'film', st:null, recv:0, net:'', cam:null, sub:null, raf:0, rec:null, chunks:[], recAt:0, recPaused:0, facing:'environment', mic:true, ht:{}, buf:[], bufBusy:0, bufAt:0, rp:null };
   if (FM.mode === 'overlay') document.documentElement.classList.add('ovl');
   show('filmView');
   var root = document.getElementById('fmRoot');
   root.className = 'fmv' + (FM.mode === 'overlay' ? ' ovl' : '');
   root.innerHTML = FM.mode === 'overlay' ? '<canvas id="fmCanvas"></canvas>' :
-    '<video id="fmVideo" playsinline muted autoplay></video><div class="fm-stage"><canvas id="fmCanvas"></canvas><div class="fm-rec" id="fmRecTag"></div><div class="fm-tip" id="fmTip">Turn your phone sideways (or tap ⤾ Wide) to film a wide video</div></div>' +
-    '<div class="fm-bar"><span class="fm-net" id="fmNet"></span>' +
-      '<button class="btn btn-ghost btn-sm" id="fmRot" onclick="filmRotate()" title="Film wide (landscape)">⤾ Wide</button>' +
-      '<button class="btn btn-ghost btn-sm" onclick="filmFlip()" title="Switch camera">⟲</button>' +
-      '<button class="btn btn-ghost btn-sm" id="fmMic" onclick="filmMicToggle()">🎙 On</button>' +
+    '<video id="fmVideo" playsinline muted autoplay></video>' +
+    '<div class="fm-stage"><canvas id="fmCanvas"></canvas><div class="fm-tip" id="fmTip">Turn your phone sideways, or tap ⤾ Wide, to film a wide video</div></div>' +
+    '<div class="fm-top"><span class="fm-net" id="fmNet"></span><span class="fm-rec" id="fmRecTag"></span><span class="fm-sp"></span>' +
+      '<button class="fm-b top" id="fmFs" onclick="filmFull()" title="Full screen">⛶ Full</button><button class="fm-b top" onclick="filmExit()">✕ Exit</button></div>' +
+    '<div class="fm-ctl">' +
+      '<button class="fm-b" id="fmRpBtn" onclick="filmReplay()" title="Slow-motion replay of the last point">⏪<small>Replay</small></button>' +
       '<button class="fm-recbtn" id="fmRecBtn" onclick="filmRecToggle()" aria-label="Record"><i></i></button>' +
-      '<button class="btn btn-ghost btn-sm" onclick="filmExit()">Exit</button></div>';
+      '<button class="fm-b" id="fmRot" onclick="filmRotate()" title="Film wide (landscape)">⤾<small>Wide</small></button>' +
+      '<button class="fm-b" onclick="filmFlip()" title="Switch camera">⟲<small>Flip</small></button>' +
+      '<button class="fm-b" id="fmMic" onclick="filmMicToggle()" title="Sound">🎙<small>On</small></button>' +
+    '</div>' +
+    '<div class="fm-rp" id="fmRp"><canvas id="fmRpC"></canvas><div class="fm-rphead"><span id="fmRpT"></span><span id="fmRpN"></span></div><div class="fm-rpbar" id="fmRpBar"></div></div>';
   FM.canvas = document.getElementById('fmCanvas'); FM.ctx = FM.canvas.getContext('2d');
   FM.sub = lvStream('/displays/' + code, function(tree){ if (!FM) return; FM.st = tree; FM.recv = Date.now(); hitTrack(FM.ht, tree, Date.now()); }, function(n){ if (FM){ FM.net = n; filmNet(); } });
   requestWake();
-  if (FM.mode === 'film') filmCam(); 
+  if (FM.mode === 'film'){ filmCam(); try { var SB = capPlugin('StatusBar'); if (SB && SB.hide) SB.hide(); } catch(e){} }
   filmLoop();
 }
 function filmNet(){ var e = document.getElementById('fmNet'); if (e && FM) e.textContent = FM.code + ' · ' + (FM.net === 'live' ? '● live' : (FM.net === 'offline' ? '○ offline' : '○ connecting')); }
@@ -8584,10 +8619,11 @@ function filmCam(){
   });
 }
 function filmFlip(){ if (!FM) return; if (FM.rec){ toast('Stop recording to switch camera'); return; } FM.facing = FM.facing === 'environment' ? 'user' : 'environment'; filmCam(); }
-function filmMicLabel(){ var b = document.getElementById('fmMic'); if (b && FM) b.textContent = FM.mic ? '🎙 On' : '🎙 Off'; }
+function filmMicLabel(){ var b = document.getElementById('fmMic'); if (b && FM) b.innerHTML = '🎙<small>' + (FM.mic ? 'On' : 'Off') + '</small>'; }
 function filmMicToggle(){ if (!FM) return; if (FM.rec){ toast('Stop recording to change sound'); return; } FM.mic = !FM.mic; filmCam(); filmMicLabel(); }
 function filmLoop(){
   if (!FM) return;
+  cancelAnimationFrame(FM.raf);
   FM.raf = requestAnimationFrame(filmLoop);
   var c = FM.canvas, ctx = FM.ctx, now = Date.now();
   if (FM.mode === 'overlay'){
@@ -8597,19 +8633,22 @@ function filmLoop(){
     filmDrawScore(ctx, W, H, now, true);
     return;
   }
+  if (FM.rp) return;   // reviewing a replay: filming is paused
   var v = document.getElementById('fmVideo'), vw = v && v.videoWidth, vh = v && v.videoHeight;
-  if (!FM.rec && vw && vh){
-    var sc = Math.min(1, 1280 / Math.max(vw, vh)), cw = Math.round(vw * sc / 2) * 2, ch = Math.round(vh * sc / 2) * 2;
+  if (!FM.rec){   // the picture takes the shape of the screen, so it fills it edge to edge (fixed while recording)
+    var ar = Math.max(0.3, Math.min(3.5, innerWidth / Math.max(1, innerHeight))), cw, ch;
+    if (ar >= 1){ cw = 1280; ch = Math.round(1280 / ar / 2) * 2; } else { ch = 1280; cw = Math.round(1280 * ar / 2) * 2; }
     if (c.width !== cw || c.height !== ch){ c.width = cw; c.height = ch; }
   }
-  if (!c.width){ c.width = 1280; c.height = 720; }
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, c.width, c.height);
   if (vw && vh){
-    var s = Math.min(c.width / vw, c.height / vh), dw = vw * s, dh = vh * s;
+    var s = Math.max(c.width / vw, c.height / vh), dw = vw * s, dh = vh * s;
     try { ctx.drawImage(v, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh); } catch(e){}
   }
   filmDrawScore(ctx, c.width, c.height, now, false);
-  if (FM.rec){ var t = document.getElementById('fmRecTag'); if (t) t.textContent = '● REC ' + dispClock((now - FM.recAt) / 1000); }
+  filmBuffer(now);
+  var t = document.getElementById('fmRecTag');
+  if (t){ var on = !!FM.rec; if (t.classList.contains('on') !== on) t.classList.toggle('on', on); if (on) t.textContent = '● REC ' + dispClock((now - FM.recAt - FM.recPaused) / 1000); }
   var tip = document.getElementById('fmTip'); if (tip){ var port = innerHeight > innerWidth && !FM.rec; if (tip.classList.contains('on') !== port) tip.classList.toggle('on', port); }
 }
 function filmFit(ctx, text, size, maxW, family){
@@ -8689,7 +8728,7 @@ function filmMime(){
   for (var i = 0; i < list.length; i++){ try { if (MediaRecorder.isTypeSupported(list[i])) return list[i]; } catch(e){} }
   return '';
 }
-function filmRecToggle(){ if (!FM) return; if (FM.rec) filmRecStop(); else filmRecStart(); }
+function filmRecToggle(){ if (!FM) return; if (FM.rp) filmRpClose(); if (FM.rec) filmRecStop(); else filmRecStart(); }
 function filmRecStart(){
   var mime = filmMime();
   if (mime === null || !FM.canvas.captureStream){ toast('This browser can’t record video. Try Chrome, or the Android app.'); return; }
@@ -8699,7 +8738,7 @@ function filmRecStart(){
   var rec;
   try { rec = new MediaRecorder(out, mime ? { mimeType:mime, videoBitsPerSecond:3500000 } : { videoBitsPerSecond:3500000 }); }
   catch(e){ toast('Could not start recording'); return; }
-  FM.chunks = []; FM.rec = rec; FM.recAt = Date.now(); FM.mimeUsed = rec.mimeType || mime || 'video/webm';
+  FM.chunks = []; FM.rec = rec; FM.recAt = Date.now(); FM.recPaused = 0; FM.mimeUsed = rec.mimeType || mime || 'video/webm';
   rec.ondataavailable = function(e){ if (e.data && e.data.size) FM.chunks.push(e.data); };
   rec.onstop = function(){ filmRecDone(); };
   rec.start(1000);
@@ -8710,7 +8749,7 @@ function filmRecStop(){
   if (!FM || !FM.rec) return;
   try { FM.rec.stop(); } catch(e){ filmRecDone(); }
   var b = document.getElementById('fmRecBtn'); if (b) b.classList.remove('on');
-  var t = document.getElementById('fmRecTag'); if (t) t.textContent = '';
+  var t = document.getElementById('fmRecTag'); if (t){ t.textContent = ''; t.classList.remove('on', 'pause'); }
 }
 function filmName(ext){
   var st = FM && FM.st, nm = st && st.L ? st.L.name + '-vs-' + st.R.name : 'bout';
@@ -8778,7 +8817,104 @@ function filmUnlock(){
   try { if (SO && SO.unlock) SO.unlock(); else if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch(e){}
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
 }
-function filmRotLabel(){ var b = document.getElementById('fmRot'); if (b && FM) b.textContent = FM.wide ? '⤿ Upright' : '⤾ Wide'; }
+function filmRotLabel(){ var b = document.getElementById('fmRot'); if (b && FM){ b.innerHTML = FM.wide ? '⤿<small>Upright</small>' : '⤾<small>Wide</small>'; b.classList.toggle('on', !!FM.wide); } }
+function filmFull(){
+  var el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+  try {
+    if (document.fullscreenElement){ document.exitFullscreen(); return; }
+    if (fs){ Promise.resolve(fs.call(el)).catch(function(){ toast('Full screen isn\u2019t available here. On iPhone, add the site to your Home Screen for full screen.'); }); }
+    else toast('Full screen isn\u2019t available here. On iPhone, add the site to your Home Screen for full screen.');
+  } catch(e){}
+}
+document.addEventListener('fullscreenchange', function(){ var b = document.getElementById('fmFs'); if (b) b.innerHTML = document.fullscreenElement ? '⤡ Exit full' : '⛶ Full'; });
+/* ---- slow-motion replay of the last point ----
+   The last 7 seconds of the picture (with the score bar) are kept as small JPEG frames. Replay pauses
+   recording, plays them at the speed picked, then offers Review again (up to 4 times, as in FIE video review) or Keep filming. */
+var RP_SECS = 7, RP_FPS = 30, RP_MAX = 4;
+function filmBuffer(now){
+  if (!FM || FM.rp || FM.bufBusy > 2 || now - FM.bufAt < 1000 / RP_FPS) return;
+  FM.bufAt = now;
+  var c = FM.canvas, sc = Math.min(1, 640 / Math.max(c.width, c.height)), w = Math.round(c.width * sc), h = Math.round(c.height * sc);
+  var sm = FM.sm || (FM.sm = document.createElement('canvas'));
+  if (sm.width !== w || sm.height !== h){ sm.width = w; sm.height = h; FM.buf = []; }
+  try { sm.getContext('2d').drawImage(c, 0, 0, w, h); } catch(e){ return; }
+  FM.bufBusy++;
+  sm.toBlob(function(b){
+    if (!FM) return; FM.bufBusy--;
+    if (!b || FM.rp) return;
+    FM.buf.push({ t:now, b:b });
+    while (FM.buf.length && now - FM.buf[0].t > RP_SECS * 1000) FM.buf.shift();
+  }, 'image/jpeg', 0.72);
+}
+function filmReplay(){
+  if (!FM || FM.rp) return;
+  if (FM.buf.length < 10){ toast('Nothing to replay yet: keep the camera on the piste for a few seconds'); return; }
+  var frames = FM.buf.slice();
+  if (FM.rec && FM.rec.state === 'recording'){ try { FM.rec.pause(); } catch(e){} FM.pauseAt = Date.now(); var t = document.getElementById('fmRecTag'); if (t){ t.classList.add('pause'); t.textContent = '❚❚ REC paused'; } }
+  FM.rp = { frames:frames, t0:frames[0].t, dur:Math.max(1, frames[frames.length - 1].t - frames[0].t), pos:0, speed:(FM.rpSpeed || 0.25), n:0, playing:false, raf:0, last:0, imgs:{}, drawn:-1 };
+  document.getElementById('fmRp').classList.add('on');
+  var c = document.getElementById('fmRpC'); c.width = FM.sm.width; c.height = FM.sm.height;
+  filmRpUi(); filmRpPlay();
+  haptic(false);
+}
+function filmRpUi(){
+  var R = FM && FM.rp; if (!R) return;
+  var done = !R.playing && R.n > 0 && R.pos >= R.dur;
+  document.getElementById('fmRpT').textContent = '⏪ Last ' + Math.round(R.dur / 1000) + ' seconds \u00b7 ' + (R.speed === 1 ? 'normal speed' : R.speed + '\u00d7');
+  document.getElementById('fmRpN').textContent = 'Review ' + Math.max(1, R.n) + ' of ' + RP_MAX;
+  var sp = [0.25, 0.5, 1].map(function(x){ return '<button class="fm-chip' + (x === R.speed ? ' on' : '') + '" onclick="filmRpSpeed(' + x + ')">' + (x === 1 ? '1\u00d7' : x + '\u00d7') + '</button>'; }).join('');
+  var left = RP_MAX - R.n;
+  document.getElementById('fmRpBar').innerHTML =
+    '<div class="fm-rprow"><button class="fm-chip" onclick="filmRpToggle()">' + (R.playing ? '❚❚ Pause' : '▶ Play') + '</button><input type="range" id="fmRpS" min="0" max="1000" value="' + Math.round(R.pos / R.dur * 1000) + '" oninput="filmRpSeek(this.value)"></div>' +
+    '<div class="fm-rprow"><span style="color:#fff;font-size:13px;">Speed</span>' + sp + '<span class="fm-sp" style="flex:1;"></span>' +
+      (done ? '<button class="fm-chip on" onclick="filmRpAgain()"' + (left > 0 ? '' : ' disabled') + '>↺ Review again' + (left > 0 ? ' (' + left + ' left)' : '') + '</button>' : '') +
+      '<button class="fm-chip' + (done && left <= 0 ? ' on' : '') + '" onclick="filmRpClose()">● Keep filming</button></div>' +
+    (done && left <= 0 ? '<div style="color:#fff;font-size:12px;opacity:.85;">That\u2019s the 4 reviews for this point.</div>' : '');
+}
+function filmRpPlay(){
+  var R = FM && FM.rp; if (!R) return;
+  if (R.pos >= R.dur){ if (R.n >= RP_MAX) return; R.pos = 0; }
+  if (R.pos === 0) R.n++;
+  R.playing = true; R.last = performance.now(); filmRpUi();
+  cancelAnimationFrame(R.raf); R.raf = requestAnimationFrame(filmRpTick);
+}
+function filmRpTick(ts){
+  var R = FM && FM.rp; if (!R || !R.playing) return;
+  R.pos = Math.min(R.dur, R.pos + (ts - R.last) * R.speed); R.last = ts;
+  filmRpDraw();
+  var sl = document.getElementById('fmRpS'); if (sl) sl.value = Math.round(R.pos / R.dur * 1000);
+  if (R.pos >= R.dur){ R.playing = false; filmRpUi(); return; }
+  R.raf = requestAnimationFrame(filmRpTick);
+}
+function filmRpDraw(){
+  var R = FM && FM.rp; if (!R) return;
+  var t = R.t0 + R.pos, i = 0, F = R.frames;
+  while (i < F.length - 1 && F[i + 1].t <= t) i++;
+  if (i === R.drawn) return;
+  R.drawn = i;
+  var draw = function(img){ if (!FM || FM.rp !== R) return; var c = document.getElementById('fmRpC'); if (c) c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); };
+  if (R.imgs[i]){ draw(R.imgs[i]); return; }
+  if (window.createImageBitmap){ createImageBitmap(F[i].b).then(function(bm){ R.imgs[i] = bm; if (R.drawn === i) draw(bm); }).catch(function(){}); }
+  else { var im = new Image(); im.onload = function(){ R.imgs[i] = im; if (R.drawn === i) draw(im); }; im.src = URL.createObjectURL(F[i].b); }
+}
+function filmRpToggle(){ var R = FM && FM.rp; if (!R) return; if (R.playing){ R.playing = false; filmRpUi(); } else filmRpPlay(); }
+function filmRpSeek(v){ var R = FM && FM.rp; if (!R) return; R.playing = false; R.pos = Math.max(0, Math.min(R.dur, v / 1000 * R.dur)); R.drawn = -1; filmRpDraw(); filmRpUi(); }
+function filmRpSpeed(x){ var R = FM && FM.rp; if (!R) return; R.speed = x; FM.rpSpeed = x; filmRpUi(); }
+function filmRpAgain(){ var R = FM && FM.rp; if (!R || R.n >= RP_MAX) return; R.pos = 0; R.drawn = -1; filmRpPlay(); }
+function filmRpFree(){
+  var R = FM && FM.rp; if (!R) return;
+  cancelAnimationFrame(R.raf);
+  Object.keys(R.imgs).forEach(function(k){ try { R.imgs[k].close && R.imgs[k].close(); } catch(e){} });
+  FM.rp = null;
+}
+function filmRpClose(){
+  if (!FM || !FM.rp) return;
+  filmRpFree();
+  document.getElementById('fmRp').classList.remove('on');
+  FM.buf = [];   // the next replay starts from fresh footage
+  if (FM.rec && FM.rec.state === 'paused'){ try { FM.rec.resume(); } catch(e){} FM.recPaused += Date.now() - (FM.pauseAt || Date.now()); var t = document.getElementById('fmRecTag'); if (t) t.classList.remove('pause'); }
+  filmLoop();
+}
 function filmClose(){
   if (!FM) return;
   if (FM.wide) filmUnlock();
@@ -8786,6 +8922,9 @@ function filmClose(){
   cancelAnimationFrame(FM.raf);
   try { FM.sub && FM.sub.close && FM.sub.close(); } catch(e){}
   if (FM.cam) FM.cam.getTracks().forEach(function(t){ t.stop(); });
+  filmRpFree();
+  try { var SB = capPlugin('StatusBar'); if (SB && SB.show && FM.mode === 'film') SB.show(); } catch(e){}
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
   document.documentElement.classList.remove('ovl');
   FM = null; releaseWake();
 }
