@@ -7597,7 +7597,7 @@ function qrScanFile(inp){
 function qrGot(text){
   text = String(text || '');
   var h = text.indexOf('#') >= 0 ? text.slice(text.indexOf('#')) : '';
-  if (!/(view|checkin|ref|host|bout|live|display|film|overlay|card|cardcheck)=/.test(h)){
+  if (!/(view|checkin|ref|host|bout|live|display|film|overlay|card|cardcheck|join)=/.test(h)){
     qrMsg('That QR code isn\u2019t a Starport Fencing code. Ask the host for the event QR.');
     try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){}
     return;
@@ -8112,6 +8112,8 @@ document.addEventListener('visibilitychange', function(){
 function lvHandleLink(){
   try {
     var h = String(location.hash || '');
+    var mj = h.match(/join=([a-z0-9-]{1,24})/i);
+    if (mj){ try { history.replaceState(null, '', location.pathname); } catch(e){} CM.join = mj[1].toLowerCase(); CM.joinAt = Date.now(); commOpen('members'); return true; }
     var mk = h.match(/card(check)?=([A-Za-z0-9]{8})/);
     if (mk){ try { history.replaceState(null, '', location.pathname); } catch(e){} cardOpen(mk[2].toUpperCase(), !mk[1]); return true; }
     var mf = h.match(/(film|overlay)=([A-Za-z0-9]{6})/);
@@ -8196,6 +8198,15 @@ function commRender(){
   else h = commAthletes();
   root.innerHTML = h;
   if (CM.tab === 'members') cardDraw();
+  if (CM.join && CM.tab === 'members' && APP_CFG && (APP_CFG.programs || APP_CFG.pioneers)){   // wait for the real settings
+    var jp = progOf(CM.join);
+    if (jp){
+      CM.join = null;
+      if (myProgs()[jp.id]) toast('You\u2019re already a member of ' + jp.title);
+      else if (jp.open) setTimeout(function(){ pioApplySheet(jp.id); }, 50);
+      else toast('Applications for ' + jp.title + ' are closed at the moment');
+    } else CM.join = null;   // no such program: just show Members
+  }
 }
 function commAppeals(){
   var L = appAppeals();
