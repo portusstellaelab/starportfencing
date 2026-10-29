@@ -224,7 +224,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .hc-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1.5px;}
 .home-card.sb .hc-title{color:var(--gold);} .home-card.lv .hc-title{color:var(--blue2);}
 .hc-desc{color:var(--muted);font-size:14px;margin-top:2px;}
-#liveHome,#liveHost,#liveView{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(var(--safe-t) + 18px) calc(var(--safe-r) + 16px) calc(var(--safe-b) + 40px) calc(var(--safe-l) + 16px);}
+#liveHome,#liveHost,#liveView,#commView{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(var(--safe-t) + 18px) calc(var(--safe-r) + 16px) calc(var(--safe-b) + 40px) calc(var(--safe-l) + 16px);}
 .lv-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .lv-title{flex:1;min-width:0;font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .lv-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:12px;}
@@ -282,7 +282,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .lt-head span{font-size:11px;}
 .lt-row.mine{background:rgba(201,162,39,.12);}
 #confirmSheet{z-index:70;}
-#home > *, #liveHome > *, #liveHost > *, #liveView > *{flex-shrink:0;}   /* long pages scroll instead of squashing the tab bar */
+#home > *, #commView > *, #liveHome > *, #liveHost > *, #liveView > *{flex-shrink:0;}   /* long pages scroll instead of squashing the tab bar */
 .lv-tabs{position:sticky;top:-18px;z-index:5;background:var(--navy);padding-top:6px;}
 .lv-mode{margin-bottom:8px;}
 .lv-mode button{font-size:13px;padding:8px 0;}
@@ -355,8 +355,8 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 /* big-screen scoreboard (📺 display) */
 #displayView{padding:0;background:#05090f;overflow:hidden;}
 #filmView{padding:0;background:#000;overflow:hidden;}
-.fm{position:fixed;inset:0;display:flex;flex-direction:column;background:#000;color:#fff;}
-.fm video{position:absolute;width:2px;height:2px;opacity:0;pointer-events:none;}
+.fmv{position:fixed;inset:0;display:flex;flex-direction:column;background:#000;color:#fff;}
+.fmv video{position:absolute;width:2px;height:2px;opacity:0;pointer-events:none;}
 .fm-stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;}
 .fm-stage canvas{max-width:100%;max-height:100%;display:block;}
 .fm-rec{position:absolute;top:10px;left:12px;color:#ff4d4d;font:600 14px 'DM Mono',monospace;text-shadow:0 1px 3px #000;}
@@ -365,8 +365,8 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .fm-recbtn{width:58px;height:58px;border-radius:50%;border:4px solid #fff;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
 .fm-recbtn i{display:block;width:40px;height:40px;border-radius:50%;background:#e53935;transition:all .15s;}
 .fm-recbtn.on i{width:22px;height:22px;border-radius:5px;}
-.fm.ovl,html.ovl,html.ovl body,html.ovl #filmView{background:transparent!important;}
-.fm.ovl canvas{width:100vw;height:100vh;display:block;}
+.fmv.ovl,html.ovl,html.ovl body,html.ovl #filmView{background:transparent!important;}
+.fmv.ovl canvas{width:100vw;height:100vh;display:block;}
 .dv-lamp{position:absolute;top:0;bottom:0;width:3.2vw;opacity:.18;transition:opacity .15s;}
 .dv-lamp.l{left:0;background:#ff2a2a;} .dv-lamp.r{right:0;background:#22e06a;}
 .dv-lamp.on{opacity:1;box-shadow:0 0 6vw 2vw currentColor;}
@@ -403,6 +403,25 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .lu-row select{flex:1;min-width:0;width:auto;}
 .lu-row input{flex:1;min-width:0;}
 .lu-pos{flex:0 0 30px;height:30px;line-height:30px;text-align:center;border-radius:50%;background:rgba(201,162,39,.15);color:var(--gold);font-weight:700;}
+.pc-card{background:linear-gradient(135deg,#1b2f52 0%,#0d1a30 60%,#2a2410 100%);border:1px solid rgba(201,162,39,.6);border-radius:16px;padding:16px;margin-bottom:10px;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.35);}
+.pc-card.off{filter:grayscale(1);opacity:.75;}
+.pc-top{display:flex;justify-content:space-between;font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;color:var(--gold);font-size:18px;}
+.pc-top span{font-family:'DM Mono',monospace;letter-spacing:0;font-size:15px;color:#fff;}
+.pc-name{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;margin-top:14px;letter-spacing:.02em;}
+.pc-meta{font-size:12.5px;color:#cfd8e6;margin-top:3px;}
+.pc-row{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:12px;}
+.pc-state{font-weight:700;font-size:15px;color:#4cd37b;} .pc-card.off .pc-state{color:#ff7b70;}
+.pc-qr{background:#fff;padding:5px;border-radius:8px;line-height:0;}
+.ap-card{display:block;width:100%;text-align:left;background:linear-gradient(135deg,rgba(201,162,39,.22),rgba(201,162,39,.08));border:1px solid rgba(201,162,39,.55);color:var(--white);border-radius:14px;padding:12px 14px;margin-top:14px;font-family:inherit;cursor:pointer;}
+.ap-card b{display:block;font-size:15px;color:var(--gold);margin-bottom:6px;}
+.ap-bar{height:8px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden;margin:6px 0 4px;}
+.ap-bar span{display:block;height:100%;background:var(--gold);border-radius:5px;}
+.ap-sum{font-size:13px;color:var(--muted);}
+.ap-box{border:1px solid rgba(201,162,39,.45);border-radius:12px;padding:12px;margin:0 0 14px;background:rgba(201,162,39,.08);}
+.ap-box h4{margin:0 0 6px;color:var(--gold);font-size:16px;}
+.ap-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);}
+.ap-item span{flex:1;font-size:14px;} .ap-item em{font-style:normal;color:var(--muted);font-size:13px;}
+.kf-frame{width:100%;height:min(640px,70vh);border:0;border-radius:12px;background:#fff;}
 .app-note{background:rgba(201,162,39,.14);border:1px solid rgba(201,162,39,.45);color:var(--white);border-radius:12px;padding:10px 12px;margin-top:16px;font-size:14px;line-height:1.45;white-space:pre-wrap;}
 .app-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:22px;}
 .app-links:empty{display:none;}
@@ -784,7 +803,12 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
 </section>
 
 <section class="view" id="displayView"><div class="dv" id="dvRoot"></div></section>
-<section class="view" id="filmView"><div class="fm" id="fmRoot"></div></section>
+<section class="view" id="commView">
+  <div class="lv-head"><button class="btn btn-ghost btn-sm" onclick="CM.check=null;show('home')">&larr; Home</button><span class="logo-main" style="font-size:22px;">COMMUNITY</span></div>
+  <div class="lv-tabs" id="cmTabs"></div>
+  <div id="cmBody"></div>
+</section>
+<section class="view" id="filmView"><div class="fmv" id="fmRoot"></div></section>
 
 <section class="view" id="setup">
   <div class="setup-head">
@@ -7535,7 +7559,7 @@ function qrScanFile(inp){
 function qrGot(text){
   text = String(text || '');
   var h = text.indexOf('#') >= 0 ? text.slice(text.indexOf('#')) : '';
-  if (!/(view|checkin|ref|host|bout|live|display|film|overlay)=/.test(h)){
+  if (!/(view|checkin|ref|host|bout|live|display|film|overlay|card|cardcheck)=/.test(h)){
     qrMsg('That QR code isn\u2019t a Starport Fencing code. Ask the host for the event QR.');
     try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){}
     return;
@@ -8050,6 +8074,8 @@ document.addEventListener('visibilitychange', function(){
 function lvHandleLink(){
   try {
     var h = String(location.hash || '');
+    var mk = h.match(/card(check)?=([A-Za-z0-9]{8})/);
+    if (mk){ try { history.replaceState(null, '', location.pathname); } catch(e){} cardOpen(mk[2].toUpperCase(), !mk[1]); return true; }
     var mf = h.match(/(film|overlay)=([A-Za-z0-9]{6})/);
     if (mf){ try { history.replaceState(null, '', location.pathname); } catch(e){} filmOpen(mf[2].toUpperCase(), mf[1]); return true; }
     var md = h.match(/display=([A-Za-z0-9]{6})/);
@@ -8071,13 +8097,185 @@ function lvHandleLink(){
 /* ---------- app settings from the owner's admin page: donation section, notice, feedback ---------- */
 var APP_CFG = Store.get('starport_cfg', null), FB_CTX = {}, FB_KIND = 'idea';
 function appPlat(){ try { if (isNative()){ var C = window.Capacitor; return (C.getPlatform && C.getPlatform()) || 'app'; } } catch(e){} return 'web'; }
+/* ===== 🌟 Community: appeals (website only), Starport Pioneers + member card, partners, athletes ===== */
+var CM = { tab:'' };
+function appAppeals(){ var a = (APP_CFG && APP_CFG.appeals) || []; return a.filter(function(x){ return x && x.on !== false && x.title; }); }
+/* Google Play: no links to outside payment pages until the charity is registered, so the store app shows the same appeal with a note instead of the button */
+function appCanPay(){ return appDonateOn(); }
+function payNote(){ var w = String(LIVE_PUBLIC_URL || 'https://portusstellaelab.github.io/starportfencing/').replace(/^https?:\/\//, '').replace(/\/$/, ''); return '<div class="lv-sub" style="text-align:center;margin:8px 0 0;">Donations are made on our website: <b>' + esc(w) + '</b></div>'; }
+function appealSum(a){
+  var got = Math.round(a.raised || 0), t = a.target | 0, pct = t ? Math.min(100, Math.round(got * 100 / t)) : 0;
+  return { pct:pct, t:t, line:'$' + got.toLocaleString() + (t ? ' of $' + t.toLocaleString() : '') + ' raised' + (a.count ? ' · ' + a.count + ' supporter' + (a.count === 1 ? '' : 's') : '') };
+}
+function appealHtml(a, ai){
+  var m = appealSum(a), items = (a.items || []).map(function(x, i){
+    return '<div class="ap-item"><span>' + esc(x.label) + (x.amount ? ' <em>$' + Math.round(x.amount).toLocaleString() + '</em>' : '') + '</span>' + (appCanPay() ? '<button class="btn btn-sm btn-gold" onclick="donateFor(' + ai + ',' + i + ')">Help with this</button>' : '') + '</div>';
+  }).join('');
+  return '<div class="ap-box"><h4>' + esc(a.title) + '</h4>' + (m.t ? '<div class="ap-bar"><span style="width:' + m.pct + '%"></span></div>' : '') + '<div class="ap-sum">' + esc(m.line) + '</div>' +
+    (a.text ? '<div class="dn-text" style="margin-top:8px;">' + donateFmt(a.text) + '</div>' : '') + items +
+    (!appCanPay() ? payNote() : (items ? '' : '<div class="sheet-row" style="margin-top:8px;"><button class="btn btn-gold btn-block" onclick="donateFor(' + ai + ',-1)">Support this</button></div>')) + '</div>';
+}
+function donateFor(ai, i){
+  var a = appAppeals()[ai]; if (!a) return;
+  kofiOpen(i >= 0 && a.items[i] ? 'For: ' + a.items[i].label + ' (' + a.title + ')' : 'For: ' + a.title);
+}
+/* Ko-fi user name from the donation link, for the in-app donation panel */
+function kofiUser(u){ var m = String(u || '').match(/^https:\/\/(?:www\.)?ko-fi\.com\/([A-Za-z0-9_]+)\/?$/i); return m ? m[1] : ''; }
+function kofiOpen(note){
+  var d = (APP_CFG && APP_CFG.donate) || {}, url = d.url || '', user = kofiUser(url);
+  if (note) lvCopy(note);
+  if (isNative()){ donateGo(url); return; }
+  if (!user){ window.open(url, '_blank', 'noopener'); return; }
+  lvSheet('<div class="sheet-title">💛 Donate on Ko-fi</div>' +
+    (note ? '<div class="lv-sub" style="margin-top:0;">We copied <b>' + esc(note) + '</b>. Paste it into the message box so we know what your donation is for.</div>' : '') +
+    '<iframe class="kf-frame" src="https://ko-fi.com/' + encodeURIComponent(user) + '/?hidefeed=true&widget=true&embed=true&preview=true" title="Donate on Ko-fi" allow="payment"></iframe>' +
+    '<div class="lv-sub" style="text-align:center;">Panel not loading? <a href="' + esc(url) + '" target="_blank" rel="noopener">Open Ko-fi in a new tab</a></div>' +
+    '<div class="sheet-row"><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>');
+}
+function commTabs(){
+  var t = [];
+  if (appAppeals().length) t.push(['appeals', 'Appeals']);
+  t.push(['pioneers', ((APP_CFG && APP_CFG.pioneers && APP_CFG.pioneers.title) || 'Starport Pioneers').replace(/^Starport\s+/i, '')]);
+  if (appPartnerOn()) t.push(['partners', 'Partners']);
+  if (((APP_CFG && APP_CFG.athletes) || []).length) t.push(['athletes', 'Athletes']);
+  return t;
+}
+function commOpen(tab){
+  var tabs = commTabs();
+  CM.auto = !tab;
+  CM.tab = tab && tabs.some(function(x){ return x[0] === tab; }) ? tab : tabs[0][0];
+  show('commView'); commRender();
+  try { appCfgLoad(); } catch(e){}
+}
+function commRender(){
+  var root = document.getElementById('cmBody'); if (!root) return;
+  var tabs = commTabs(); if (CM.auto || !tabs.some(function(x){ return x[0] === CM.tab; })) CM.tab = tabs[0][0];
+  document.getElementById('cmTabs').innerHTML = tabs.map(function(x){ return '<button class="lv-tab' + (x[0] === CM.tab ? ' on' : '') + '" onclick="CM.auto=false;CM.tab=\'' + x[0] + '\';commRender()">' + esc(x[1]) + '</button>'; }).join('');
+  var h = '';
+  if (CM.tab === 'appeals') h = commAppeals();
+  else if (CM.tab === 'pioneers') h = commPioneers();
+  else if (CM.tab === 'partners') h = commPartners();
+  else h = commAthletes();
+  root.innerHTML = h;
+  if (CM.tab === 'pioneers') cardDraw();
+}
+function commAppeals(){
+  var L = appAppeals();
+  return '<div class="lv-sub" style="margin-top:0;">Starport Fencing is free, with no ads. These appeals help athletes get to competitions and keep the app running. Thank you for any support.</div>' +
+    L.map(appealHtml).join('') +
+    (appCanPay() ? '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="donateOpen()">💛 About our cause &amp; donations</button></div>' : '');
+}
+function commPartners(){
+  var p = APP_CFG.partner || {}, web = LIVE_PUBLIC_URL || lvBaseUrl();
+  var kofi = p.kofiUrl || ((APP_CFG.donate || {}).url) || '', page = p.pageUrl || (web ? web.replace(/\/?$/, '/') + 'partners.html' : '');
+  var storeApp = isNative() && !((APP_CFG.donate || {}).inApp), offers = (APP_CFG.offers || []);
+  function btn(href, label, gold){ return '<a class="btn ' + (gold ? 'btn-gold' : 'btn-ghost') + ' btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(href) + '"' + (/^mailto:/.test(href) ? '' : ' target="_blank" rel="noopener" onclick="return donateGo(this.href)"') + '>' + label + '</a>'; }
+  var names = []; offers.forEach(function(o){ if (names.indexOf(o.partner) < 0) names.push(o.partner); });
+  return '<div class="lv-card"><div class="lv-team-name">🤝 ' + esc(p.title || 'Partner with us') + '</div><div class="dn-text" style="margin-top:8px;">' + esc(p.text || '') + '</div>' +
+    '<div class="sheet-row" style="flex-direction:column;gap:8px;">' +
+    (p.email ? btn('mailto:' + p.email + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) : '') +
+    (page ? btn(page, 'How we partner: levels &amp; benefits', false) : '') +
+    (kofi && !storeApp ? btn(kofi, 'Partners, shop &amp; support on Ko-fi', false) : '') + '</div></div>' +
+    (names.length ? '<div class="lv-card"><div class="lv-team-name">Our community partners</div><div class="lv-sub">Thank you to the businesses supporting our athletes and Pioneers.</div>' + names.map(function(n){ return '<div class="ap-item"><span>' + esc(n) + '</span></div>'; }).join('') + '</div>' : '');
+}
+function commAthletes(){
+  var L = (APP_CFG.athletes || []);
+  return '<div class="lv-sub" style="margin-top:0;">Athletes we support. Each athlete chose to be listed here.</div>' +
+    L.map(function(a){ return '<div class="lv-card"><div class="lv-team-name">' + esc(a.name) + '</div><div class="lv-sub" style="margin:2px 0 0;">' + esc([a.sport, a.goal].filter(Boolean).join(' · ')) + '</div></div>'; }).join('') +
+    '<div class="lv-sub">Are you an athlete who needs support, or ready for sponsors? Email ' + esc((APP_CFG.partner || {}).email || 'portusstellaelab@gmail.com') + '.</div>';
+}
+/* --- Starport Pioneers --- */
+function pioCfg(){ return (APP_CFG && APP_CFG.pioneers) || { open:false, spots:20, title:'Starport Pioneers', text:'' }; }
+function commPioneers(){
+  var p = pioCfg(), card = Store.get('starport_card', null), left = Math.max(0, (p.spots | 0) - (p.taken | 0));
+  return '<div id="cmCard"></div>' +
+    '<div class="lv-card"><div class="lv-team-name">🚀 ' + esc(p.title || 'Starport Pioneers') + '</div>' +
+    (p.text ? '<div class="dn-text" style="margin-top:8px;">' + donateFmt(p.text) + '</div>' : '') +
+    '<div class="lv-sub">' + (p.open ? (left ? left + ' of ' + (p.spots | 0) + ' places left' : 'All places are taken: you can still apply for the waitlist') : 'Applications are closed at the moment.') + '</div>' +
+    (p.open && !card ? '<button class="btn btn-gold btn-block" onclick="pioApplySheet()">Apply to join</button>' : '') + '</div>' +
+    (card ? '' : '<div class="lv-card"><div class="lv-team-name">Already a member?</div><div class="lv-sub">Open the card link we sent you, or type your 8-character card code.</div>' +
+      '<div style="display:flex;gap:8px;"><input id="cmCode" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Card code" maxlength="9"><button class="btn btn-gold" onclick="cardAdd()">Open my card</button></div></div>');
+}
+function pioApplySheet(){
+  var p = pioCfg();
+  var st = ['VIC', 'NSW', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT', 'Outside Australia'];
+  var roles = ['Athlete', 'Coach', 'Referee / official', 'Manager / organiser', 'Athlete and coach', 'Other'];
+  lvSheet('<div class="sheet-title">🚀 Join ' + esc(p.title || 'Starport Pioneers') + '</div>' +
+    '<label>Full name</label><input id="pjName" maxlength="80" autocomplete="name">' +
+    '<label style="margin-top:10px;">Email</label><input id="pjEmail" type="email" maxlength="120" autocomplete="email">' +
+    '<label style="margin-top:10px;">Mobile (optional)</label><input id="pjPhone" type="tel" maxlength="30" autocomplete="tel">' +
+    '<div style="display:flex;gap:8px;margin-top:10px;"><div style="flex:1;"><label>Where you live</label><select id="pjState" onchange="document.getElementById(\'pjCtyW\').style.display=this.value===\'Outside Australia\'?\'block\':\'none\'">' + st.map(function(s){ return '<option>' + s + '</option>'; }).join('') + '</select></div>' +
+    '<div style="flex:1;display:none;" id="pjCtyW"><label>Country</label><input id="pjCountry" maxlength="40"></div></div>' +
+    '<label class="chk-row" style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:14px;"><input type="checkbox" id="pjRes" style="width:auto;margin-top:3px;"> I live in Australia permanently or long-term</label>' +
+    '<div style="display:flex;gap:8px;margin-top:10px;"><div style="flex:1;"><label>Sport</label><input id="pjSport" maxlength="60" placeholder="e.g. Fencing (foil), BJJ, MMA"></div>' +
+    '<div style="flex:1;"><label>Role</label><select id="pjRole">' + roles.map(function(s){ return '<option>' + s + '</option>'; }).join('') + '</select></div></div>' +
+    '<label style="margin-top:10px;">Club or gym</label><input id="pjClub" maxlength="80">' +
+    '<label style="margin-top:10px;">Your phone</label><select id="pjAndroid"><option value="Android">Android</option><option value="iPhone">iPhone</option><option value="Both">Both / other</option></select>' +
+    '<div class="lv-sub">The first testing round is on Android (Google Play). iPhone users can test the website version.</div>' +
+    '<label style="margin-top:6px;">Why would you like to join? What do you do in your sport?</label><textarea id="pjWhy" rows="4" maxlength="1500"></textarea>' +
+    '<label class="chk-row" style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:13px;line-height:1.45;"><input type="checkbox" id="pjOk" style="width:auto;margin-top:3px;"> I agree that Portus Stellae Lab stores these details to run the program and contact me. I understand the program is voluntary and unpaid. <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></label>' +
+    '<div id="pjMsg" class="lv-sub" style="min-height:18px;"></div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Cancel</button><button class="btn btn-gold btn-block" id="pjBtn" onclick="pioApply()">Send application</button></div>');
+}
+function pioApply(){
+  var v = function(id){ return String(lvVal(id) || '').trim(); }, ok = document.getElementById('pjOk').checked, st = v('pjState');
+  var b = { name:v('pjName'), email:v('pjEmail'), phone:v('pjPhone'), state:st, country:st === 'Outside Australia' ? v('pjCountry') : 'Australia',
+    residency:document.getElementById('pjRes').checked ? 'Lives in Australia permanently or long-term' : 'Not long-term in Australia',
+    sport:v('pjSport'), role:v('pjRole'), club:v('pjClub'), android:v('pjAndroid'), why:v('pjWhy'), consent:ok };
+  var msg = document.getElementById('pjMsg');
+  if (b.name.length < 2){ msg.textContent = 'Please add your name.'; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.email)){ msg.textContent = 'Please add a valid email.'; return; }
+  if (!b.sport){ msg.textContent = 'Please add your sport.'; return; }
+  if (!ok){ msg.textContent = 'Please tick the consent box.'; return; }
+  var btn = document.getElementById('pjBtn'); btn.disabled = true; msg.textContent = 'Sending…';
+  liveFetch('POST', '/pioneers', b).then(function(r){
+    btn.disabled = false;
+    if (!r.ok){ msg.textContent = (r.data && r.data.error) || 'Could not send. Check your internet and try again.'; return; }
+    lvSheet('<div class="sheet-title">🚀 Application sent</div><div class="lv-sub" style="margin-top:0;">Thank you, ' + esc(b.name.split(' ')[0]) + '! We’ll email you at <b>' + esc(b.email) + '</b> about the next steps.</div>' +
+      '<div class="sheet-row"><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>');
+  });
+}
+/* --- member card --- */
+function cardAdd(){ var c = String(lvVal('cmCode') || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length !== 8){ toast('Card codes have 8 characters'); return; } cardOpen(c, true); }
+function cardOpen(code, mine){
+  if (mine){ Store.set('starport_card', code); CM.check = null; commOpen('pioneers'); return; }
+  CM.check = code; commOpen('pioneers');
+}
+function cardLinkOf(code){ var b = LIVE_PUBLIC_URL || lvBaseUrl(); return b ? b + '#cardcheck=' + code : ''; }
+function cardDraw(){
+  var el = document.getElementById('cmCard'); if (!el) return;
+  var code = CM.check || Store.get('starport_card', null); if (!code){ el.innerHTML = ''; return; }
+  var check = !!CM.check;
+  el.innerHTML = '<div class="pc-card"><div class="pc-top">STARPORT PIONEERS</div><div class="lv-sub" style="color:#cfd8e6;">Checking card…</div></div>';
+  liveFetch('GET', '/cards/' + code).then(function(r){
+    if (!document.getElementById('cmCard')) return;
+    if (!r.ok || !r.data || !r.data.ok){
+      el.innerHTML = '<div class="lv-card"><div class="lv-team-name">Card not found</div><div class="lv-sub">' + (r.status === 404 ? 'That card code doesn’t exist. Check the code in your email.' : 'Couldn’t check the card. Check your internet.') + '</div>' +
+        (check ? '' : '<button class="btn btn-ghost btn-sm" onclick="cardForget()">Remove this card</button>') + '</div>';
+      return;
+    }
+    var d = r.data, offers = d.active ? ((APP_CFG && APP_CFG.offers) || []) : [];
+    el.innerHTML = '<div class="pc-card' + (d.active ? '' : ' off') + '"><div class="pc-top">STARPORT PIONEERS<span>' + esc(d.no) + '</span></div>' +
+      '<div class="pc-name">' + esc(d.name) + '</div><div class="pc-meta">' + esc([d.sport, d.role].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="pc-row"><div><div class="pc-state">' + (d.active ? '✔ Valid member' : '✖ Not active') + '</div><div class="pc-meta">Member since ' + esc(new Date(d.since).toLocaleDateString('en-AU', { month:'short', year:'numeric' })) + (d.group ? ' · ' + esc(d.group) : '') + '</div>' +
+      '<div class="pc-meta">Checked ' + esc(new Date().toLocaleString('en-AU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })) + '</div></div>' +
+      (check ? '' : '<div id="pcQr" class="pc-qr"></div>') + '</div></div>' +
+      (check ? '<div class="lv-sub" style="text-align:center;">This is a live check of a Starport Pioneers card.</div><div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="CM.check=null;commRender()">Close</button></div>' :
+      '<div class="lv-sub" style="text-align:center;">Show this card at partner shops. They can scan the QR to check it.</div>' +
+      (offers.length ? '<div class="lv-card"><div class="lv-team-name">🎁 Your member offers</div>' + offers.map(function(o){ return '<div class="ap-item"><span><b>' + esc(o.partner) + '</b>: ' + esc(o.offer) + (o.where || o.how ? '<br><em>' + esc([o.where, o.how].filter(Boolean).join(' · ')) + '</em>' : '') + '</span></div>'; }).join('') + '</div>' : '') +
+      '<div style="text-align:right;margin:-4px 0 10px;"><button class="btn btn-ghost btn-sm" onclick="cardForget()">Remove card from this device</button></div>');
+    if (!check) lvQrInto('pcQr', cardLinkOf(code), 96);
+  });
+}
+function cardForget(){ Store.set('starport_card', null); commRender(); }
 function appDonateOn(){ var d = APP_CFG && APP_CFG.donate; return !!(d && d.on && /^https:\/\//i.test(d.url || '') && (!isNative() || d.inApp)); }
 function appFeedbackOn(){ return !!(LIVE_DB && liveIsCF() && !(APP_CFG && APP_CFG.feedback && APP_CFG.feedback.on === false)); }
 function appCfgApply(){
   var n = APP_CFG && APP_CFG.notice, el = document.getElementById('appNote');
   if (el) el.innerHTML = (n && n.on && n.text) ? '<div class="app-note">📣 ' + esc(n.text) + '</div>' : '';
+  if (document.getElementById('commView') && document.getElementById('commView').classList.contains('on')) commRender();
   var html = (appDonateOn() ? '<button class="app-link gold" onclick="donateOpen()">💛 Support this app</button>' : '') +
-             (appPartnerOn() ? '<button class="app-link gold" onclick="partnerOpen()">\uD83E\uDD1D Partner with us</button>' : '') +
+             '<button class="app-link gold" onclick="commOpen()">\uD83C\uDF1F Community</button>' +
              '<button class="app-link" onclick="webQrOpen()">\uD83D\uDCF1 Open on another device</button>' +
              (appFeedbackOn() ? '<button class="app-link" onclick="fbOpen()">💬 Send feedback</button>' : '') +
              '<button class="app-link" onclick="appGuide()">📖 User guide</button>';
@@ -8093,7 +8291,7 @@ function donateOpen(){
   var d = APP_CFG.donate;
   lvSheet('<div class="sheet-title">💛 ' + esc(d.title || 'Support Starport Fencing') + '</div>' +
     '<div class="dn-text">' + donateFmt(d.text || '') + '</div>' +
-    '<a class="btn btn-gold btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(d.url) + '" target="_blank" rel="noopener" onclick="return donateGo(this.href)">' + esc(d.btn || 'Donate') + '</a>' +
+    '<a class="btn btn-gold btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(d.url) + '" target="_blank" rel="noopener" onclick="kofiOpen();return false;">' + esc(d.btn || 'Donate') + '</a>' +
     (d.note ? '<div class="lv-sub" style="text-align:center;margin-top:10px;">' + esc(d.note) + '</div>' : '') +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>');
 }
@@ -8345,7 +8543,7 @@ function filmOpen(code, mode){
   if (FM.mode === 'overlay') document.documentElement.classList.add('ovl');
   show('filmView');
   var root = document.getElementById('fmRoot');
-  root.className = 'fm' + (FM.mode === 'overlay' ? ' ovl' : '');
+  root.className = 'fmv' + (FM.mode === 'overlay' ? ' ovl' : '');
   root.innerHTML = FM.mode === 'overlay' ? '<canvas id="fmCanvas"></canvas>' :
     '<video id="fmVideo" playsinline muted autoplay></video><div class="fm-stage"><canvas id="fmCanvas"></canvas><div class="fm-rec" id="fmRecTag"></div></div>' +
     '<div class="fm-bar"><span class="fm-net" id="fmNet"></span>' +
