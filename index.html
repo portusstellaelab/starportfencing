@@ -430,6 +430,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .lu-row select{flex:1;min-width:0;width:auto;}
 .lu-row input{flex:1;min-width:0;}
 .lu-pos{flex:0 0 30px;height:30px;line-height:30px;text-align:center;border-radius:50%;background:rgba(201,162,39,.15);color:var(--gold);font-weight:700;}
+.pg-more summary{cursor:pointer;color:var(--gold);font-size:14px;margin-top:6px;}
 .pc-card{background:linear-gradient(135deg,#1b2f52 0%,#0d1a30 60%,#2a2410 100%);border:1px solid rgba(201,162,39,.6);border-radius:16px;padding:16px;margin-bottom:10px;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.35);}
 .pc-card.off{filter:grayscale(1);opacity:.75;}
 .pc-top{display:flex;justify-content:space-between;font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;color:var(--gold);font-size:18px;}
@@ -8172,7 +8173,7 @@ function kofiOpen(note){
 function commTabs(){
   var t = [];
   if (appAppeals().length) t.push(['appeals', 'Appeals']);
-  t.push(['pioneers', ((APP_CFG && APP_CFG.pioneers && APP_CFG.pioneers.title) || 'Starport Pioneers Program').replace(/^Starport\s+/i, '')]);
+  t.push(['members', 'Members']);
   if (appPartnerOn()) t.push(['partners', 'Partners']);
   t.push(['athletes', 'Athletes']);
   return t;
@@ -8190,11 +8191,11 @@ function commRender(){
   document.getElementById('cmTabs').innerHTML = tabs.map(function(x){ return '<button class="lv-tab' + (x[0] === CM.tab ? ' on' : '') + '" onclick="CM.auto=false;CM.tab=\'' + x[0] + '\';commRender()">' + esc(x[1]) + '</button>'; }).join('');
   var h = '';
   if (CM.tab === 'appeals') h = commAppeals();
-  else if (CM.tab === 'pioneers') h = commPioneers();
+  else if (CM.tab === 'members') h = commMembers();
   else if (CM.tab === 'partners') h = commPartners();
   else h = commAthletes();
   root.innerHTML = h;
-  if (CM.tab === 'pioneers') cardDraw();
+  if (CM.tab === 'members') cardDraw();
 }
 function commAppeals(){
   var L = appAppeals();
@@ -8219,23 +8220,41 @@ function commAthletes(){
     '<div class="lv-card"><div class="lv-team-name">Are you an athlete?</div><div class="lv-sub" style="margin-bottom:0;">Whether you need support to keep competing, or you\u2019re ready for sponsors, tell us about your sport and your goals.</div></div>' +
     pxRow(pxBtn('mailto:' + pxEmail() + '?subject=' + encodeURIComponent('Athlete support - Starport Fencing'), '✉ Email us', true) + pxKofiBtn());
 }
-/* --- Starport Pioneers --- */
-function pioCfg(){ return (APP_CFG && APP_CFG.pioneers) || { open:false, spots:20, title:'Starport Pioneers Program', text:'' }; }
-function commPioneers(){
-  var p = pioCfg(), card = Store.get('starport_card', null), left = Math.max(0, (p.spots | 0) - (p.taken | 0));
-  return '<div id="cmCard"></div>' +
-    '<div class="lv-card"><div class="lv-team-name">🚀 ' + esc(p.title || 'Starport Pioneers Program') + '</div>' +
-    (p.text ? '<div class="dn-text" style="margin-top:8px;">' + donateFmt(p.text) + '</div>' : '') +
-    '<div class="lv-sub">' + (p.open ? (left ? left + ' of ' + (p.spots | 0) + ' places left' : 'All places are taken: you can still apply for the waitlist') : 'Applications are closed at the moment.') + '</div>' +
-    (p.open && !card ? '<button class="btn btn-gold btn-block" onclick="pioApplySheet()">Apply to join</button>' : '') + '</div>' +
-    (card ? '' : '<div class="lv-card"><div class="lv-team-name">Already a member?</div><div class="lv-sub">Open the card link we sent you, or type your 8-character card code.</div>' +
-      '<div style="display:flex;gap:8px;"><input id="cmCode" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Card code" maxlength="9"><button class="btn btn-gold" onclick="cardAdd()">Open my card</button></div></div>');
+/* --- Members: programs (Starport Pioneers Program first) and member cards --- */
+function progs(){
+  var P = (APP_CFG && APP_CFG.programs) || [];
+  if (P.length) return P.filter(function(x){ return x.on !== false; });
+  var p = (APP_CFG && APP_CFG.pioneers) || { open:false, spots:20, title:'Starport Pioneers Program', text:'' };
+  return [{ id:'pioneers', title:p.title || 'Starport Pioneers Program', open:!!p.open, spots:p.spots == null ? 20 : p.spots, taken:p.taken | 0, text:p.text || '' }];
 }
-function pioApplySheet(){
-  var p = pioCfg();
+function progOf(id){ id = id || 'pioneers'; return progs().filter(function(x){ return x.id === id; })[0] || null; }
+function myCards(){
+  var L = Store.get('starport_cards', null), one = Store.get('starport_card', null);
+  if (!Array.isArray(L)) L = [];
+  if (one && L.indexOf(one) < 0){ L.push(one); Store.set('starport_cards', L); Store.set('starport_card', null); }
+  return L;
+}
+function myProgs(){ var m = Store.get('starport_cardprog', null) || {}, out = {}; myCards().forEach(function(c){ if (m[c]) out[m[c]] = true; }); return out; }
+function commMembers(){
+  var P = progs(), many = P.length > 1, mine = myProgs();
+  return '<div id="cmCards"></div>' +
+    (P.length ? '' : '<div class="lv-sub" style="margin-top:0;">No member programs are open at the moment.</div>') +
+    P.map(function(p){
+      var left = p.spots ? Math.max(0, (p.spots | 0) - (p.taken | 0)) : -1;
+      var text = p.text ? (many ? '<details class="pg-more"><summary>About this program</summary><div class="dn-text" style="margin-top:8px;">' + donateFmt(p.text) + '</div></details>' : '<div class="dn-text" style="margin-top:8px;">' + donateFmt(p.text) + '</div>') : '';
+      return '<div class="lv-card"><div class="lv-team-name">🚀 ' + esc(p.title) + '</div>' + text +
+        '<div class="lv-sub">' + (p.open ? (left < 0 ? 'Applications are open' : (left ? left + ' of ' + (p.spots | 0) + ' places left' : 'All places are taken: you can still apply for the waitlist')) : 'Applications are closed at the moment.') + '</div>' +
+        (mine[p.id] ? '<div class="lv-sub" style="color:#4cd37b;margin-bottom:0;">✔ You\u2019re a member: your card is above.</div>' : (p.open ? '<button class="btn btn-gold btn-block" onclick="pioApplySheet(\'' + esc(p.id) + '\')">Apply to join</button>' : '')) + '</div>';
+    }).join('') +
+    '<div class="lv-card"><div class="lv-team-name">' + (myCards().length ? 'Add another member card' : 'Already a member?') + '</div><div class="lv-sub">Open the card link we sent you, or type your 8-character card code.</div>' +
+      '<div style="display:flex;gap:8px;"><input id="cmCode" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Card code" maxlength="9"><button class="btn btn-gold" onclick="cardAdd()">Open my card</button></div></div>';
+}
+function pioApplySheet(pid){
+  var p = progOf(pid); if (!p) return;
   var st = ['VIC', 'NSW', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT', 'Outside Australia'];
   var roles = ['Athlete', 'Coach', 'Referee / official', 'Manager / organiser', 'Athlete and coach', 'Other'];
-  lvSheet('<div class="sheet-title">🚀 Join ' + esc(p.title || 'Starport Pioneers Program') + '</div>' +
+  CM.applyFor = p.id;
+  lvSheet('<div class="sheet-title">🚀 Join ' + esc(p.title) + '</div>' +
     '<label>Full name</label><input id="pjName" maxlength="80" autocomplete="name">' +
     '<label style="margin-top:10px;">Email</label><input id="pjEmail" type="email" maxlength="120" autocomplete="email">' +
     '<label style="margin-top:10px;">Mobile (optional)</label><input id="pjPhone" type="tel" maxlength="30" autocomplete="tel">' +
@@ -8254,7 +8273,7 @@ function pioApplySheet(){
 }
 function pioApply(){
   var v = function(id){ return String(lvVal(id) || '').trim(); }, ok = document.getElementById('pjOk').checked, st = v('pjState');
-  var b = { name:v('pjName'), email:v('pjEmail'), phone:v('pjPhone'), state:st, country:st === 'Outside Australia' ? v('pjCountry') : 'Australia',
+  var b = { program:CM.applyFor || 'pioneers', name:v('pjName'), email:v('pjEmail'), phone:v('pjPhone'), state:st, country:st === 'Outside Australia' ? v('pjCountry') : 'Australia',
     residency:document.getElementById('pjRes').checked ? 'Lives in Australia permanently or long-term' : 'Not long-term in Australia',
     sport:v('pjSport'), role:v('pjRole'), club:v('pjClub'), android:v('pjAndroid'), why:v('pjWhy'), consent:ok };
   var msg = document.getElementById('pjMsg');
@@ -8266,43 +8285,52 @@ function pioApply(){
   liveFetch('POST', '/pioneers', b).then(function(r){
     btn.disabled = false;
     if (!r.ok){ msg.textContent = (r.data && r.data.error) || 'Could not send. Check your internet and try again.'; return; }
-    lvSheet('<div class="sheet-title">🚀 Application sent</div><div class="lv-sub" style="margin-top:0;">Thank you, ' + esc(b.name.split(' ')[0]) + '! We’ll email you at <b>' + esc(b.email) + '</b> about the next steps.</div>' +
+    var p = progOf(b.program);
+    lvSheet('<div class="sheet-title">🚀 Application sent</div><div class="lv-sub" style="margin-top:0;">Thank you, ' + esc(b.name.split(' ')[0]) + '! We’ll email you at <b>' + esc(b.email) + '</b> about the ' + esc(p ? p.title : 'program') + '.</div>' +
       '<div class="sheet-row"><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>');
   });
 }
-/* --- member card --- */
+/* --- member cards --- */
 function cardAdd(){ var c = String(lvVal('cmCode') || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length !== 8){ toast('Card codes have 8 characters'); return; } cardOpen(c, true); }
 function cardOpen(code, mine){
-  if (mine){ Store.set('starport_card', code); CM.check = null; commOpen('pioneers'); return; }
-  CM.check = code; commOpen('pioneers');
+  if (mine){ var L = myCards(); if (L.indexOf(code) < 0){ L.push(code); Store.set('starport_cards', L); } CM.check = null; commOpen('members'); return; }
+  CM.check = code; commOpen('members');
 }
 function cardLinkOf(code){ var b = LIVE_PUBLIC_URL || lvBaseUrl(); return b ? b + '#cardcheck=' + code : ''; }
 function cardDraw(){
-  var el = document.getElementById('cmCard'); if (!el) return;
-  var code = CM.check || Store.get('starport_card', null); if (!code){ el.innerHTML = ''; return; }
-  var check = !!CM.check;
-  el.innerHTML = '<div class="pc-card"><div class="pc-top">STARPORT PIONEERS PROGRAM</div><div class="lv-sub" style="color:#cfd8e6;">Checking card…</div></div>';
-  liveFetch('GET', '/cards/' + code).then(function(r){
-    if (!document.getElementById('cmCard')) return;
-    if (!r.ok || !r.data || !r.data.ok){
-      el.innerHTML = '<div class="lv-card"><div class="lv-team-name">Card not found</div><div class="lv-sub">' + (r.status === 404 ? 'That card code doesn’t exist. Check the code in your email.' : 'Couldn’t check the card. Check your internet.') + '</div>' +
-        (check ? '' : '<button class="btn btn-ghost btn-sm" onclick="cardForget()">Remove this card</button>') + '</div>';
-      return;
-    }
-    var d = r.data, offers = d.active ? ((APP_CFG && APP_CFG.offers) || []) : [];
-    el.innerHTML = '<div class="pc-card' + (d.active ? '' : ' off') + '"><div class="pc-top">STARPORT PIONEERS PROGRAM<span>' + esc(d.no) + '</span></div>' +
-      '<div class="pc-name">' + esc(d.name) + '</div><div class="pc-meta">' + esc([d.sport, d.role].filter(Boolean).join(' · ')) + '</div>' +
-      '<div class="pc-row"><div><div class="pc-state">' + (d.active ? '✔ Valid member' : '✖ Not active') + '</div><div class="pc-meta">Member since ' + esc(new Date(d.since).toLocaleDateString('en-AU', { month:'short', year:'numeric' })) + (d.group ? ' · ' + esc(d.group) : '') + '</div>' +
-      '<div class="pc-meta">Checked ' + esc(new Date().toLocaleString('en-AU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })) + '</div></div>' +
-      (check ? '' : '<div id="pcQr" class="pc-qr"></div>') + '</div></div>' +
-      (check ? '<div class="lv-sub" style="text-align:center;">This is a live check of a Starport Pioneers Program card.</div><div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="CM.check=null;commRender()">Close</button></div>' :
-      '<div class="lv-sub" style="text-align:center;">Show this card at partner shops. They can scan the QR to check it.</div>' +
-      (offers.length ? '<div class="lv-card"><div class="lv-team-name">🎁 Your member offers</div>' + offers.map(function(o){ return '<div class="ap-item"><span><b>' + esc(o.partner) + '</b>: ' + esc(o.offer) + (o.where || o.how ? '<br><em>' + esc([o.where, o.how].filter(Boolean).join(' · ')) + '</em>' : '') + '</span></div>'; }).join('') + '</div>' : '') +
-      '<div style="text-align:right;margin:-4px 0 10px;"><button class="btn btn-ghost btn-sm" onclick="cardForget()">Remove card from this device</button></div>');
-    if (!check) lvQrInto('pcQr', cardLinkOf(code), 96);
+  var el = document.getElementById('cmCards'); if (!el) return;
+  var check = !!CM.check, codes = check ? [CM.check] : myCards();
+  if (!codes.length){ el.innerHTML = ''; return; }
+  el.innerHTML = codes.map(function(c, i){ return '<div id="pcW' + i + '"><div class="pc-card"><div class="pc-top">MEMBER CARD</div><div class="lv-sub" style="color:#cfd8e6;">Checking card…</div></div></div>'; }).join('') +
+    (check ? '<div class="lv-sub" style="text-align:center;">This is a live check of a Starport member card.</div><div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="CM.check=null;commRender()">Close</button></div>'
+      : '<div class="lv-sub" style="text-align:center;">Show your card at partner shops. They can scan the QR to check it.</div>');
+  var anyActive = false, done = 0;
+  codes.forEach(function(code, i){
+    liveFetch('GET', '/cards/' + code).then(function(r){
+      var w = document.getElementById('pcW' + i); if (!w) return;
+      if (!r.ok || !r.data || !r.data.ok){
+        w.innerHTML = '<div class="lv-card"><div class="lv-team-name">Card ' + esc(code) + ' not found</div><div class="lv-sub">' + (r.status === 404 ? 'That card code doesn’t exist. Check the code in your email.' : 'Couldn’t check the card. Check your internet.') + '</div>' +
+          (check ? '' : '<button class="btn btn-ghost btn-sm" onclick="cardForget(\'' + esc(code) + '\')">Remove this card</button>') + '</div>';
+      } else {
+        var d = r.data, p = progOf(d.program), pt = p ? p.title : (d.program === 'pioneers' ? 'Starport Pioneers Program' : 'Starport member');
+        if (!check){ var mp = Store.get('starport_cardprog', null) || {}; if (mp[code] !== d.program){ mp[code] = d.program; Store.set('starport_cardprog', mp); setTimeout(commRender, 0); } }   // first time we learn a card's program: redraw so its Apply button becomes "You're a member"
+        if (d.active) anyActive = true;
+        w.innerHTML = '<div class="pc-card' + (d.active ? '' : ' off') + '"><div class="pc-top">' + esc(pt.toUpperCase()) + '<span>' + esc(d.no) + '</span></div>' +
+          '<div class="pc-name">' + esc(d.name) + '</div><div class="pc-meta">' + esc([d.sport, d.role].filter(Boolean).join(' · ')) + '</div>' +
+          '<div class="pc-row"><div><div class="pc-state">' + (d.active ? '✔ Valid member' : '✖ Not active') + '</div><div class="pc-meta">Member since ' + esc(new Date(d.since).toLocaleDateString('en-AU', { month:'short', year:'numeric' })) + (d.group ? ' · ' + esc(d.group) : '') + '</div>' +
+          '<div class="pc-meta">Checked ' + esc(new Date().toLocaleString('en-AU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })) + '</div></div>' +
+          (check ? '' : '<div id="pcQr' + i + '" class="pc-qr"></div>') + '</div></div>' +
+          (check ? '' : '<div style="text-align:right;margin:-4px 0 10px;"><button class="btn btn-ghost btn-sm" onclick="cardForget(\'' + esc(code) + '\')">Remove card from this device</button></div>');
+        if (!check) lvQrInto('pcQr' + i, cardLinkOf(code), 96);
+      }
+      if (++done === codes.length && anyActive && !check){
+        var offers = (APP_CFG && APP_CFG.offers) || [];
+        if (offers.length) el.insertAdjacentHTML('beforeend', '<div class="lv-card"><div class="lv-team-name">🎁 Your member offers</div>' + offers.map(function(o){ return '<div class="ap-item"><span><b>' + esc(o.partner) + '</b>: ' + esc(o.offer) + (o.where || o.how ? '<br><em>' + esc([o.where, o.how].filter(Boolean).join(' · ')) + '</em>' : '') + '</span></div>'; }).join('') + '</div>');
+      }
+    });
   });
 }
-function cardForget(){ Store.set('starport_card', null); commRender(); }
+function cardForget(code){ Store.set('starport_cards', myCards().filter(function(c){ return c !== code; })); commRender(); }
 function appDonateOn(){ var d = APP_CFG && APP_CFG.donate; return !!(d && d.on && /^https:\/\//i.test(d.url || '') && (!isNative() || d.inApp)); }
 function appFeedbackOn(){ return !!(LIVE_DB && liveIsCF() && !(APP_CFG && APP_CFG.feedback && APP_CFG.feedback.on === false)); }
 function appCfgApply(){
@@ -8963,7 +8991,7 @@ function filmOpenFromInput(){ var c = String(lvVal('dvCodeIn') || '').trim().toU
 })();
 
 /* Boot: on native, restore any storage the WebView may have evicted. */
-Store.hydrateFromNative(['starport_matches','starport_settings','starport_live','starport_live_outbox','starport_live_sent','starport_device','starport_lv_recent'], function(){ loadSettings(); try { liveLoadConn(); renderLivePanel(); } catch(e){} });
+Store.hydrateFromNative(['starport_matches','starport_settings','starport_live','starport_live_outbox','starport_live_sent','starport_device','starport_lv_recent','starport_cards','starport_card','starport_cardprog'], function(){ loadSettings(); try { liveLoadConn(); renderLivePanel(); } catch(e){} });
 loadSettings();
 renderCountries();
 renderWeapons();
