@@ -359,6 +359,8 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .fmv video{position:absolute;width:2px;height:2px;opacity:0;pointer-events:none;}
 .fm-stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;}
 .fm-stage canvas{max-width:100%;max-height:100%;display:block;}
+.fm-tip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(5,9,15,.78);border:1px solid rgba(201,162,39,.6);color:#fff;border-radius:12px;padding:10px 14px;font-size:14px;text-align:center;max-width:80%;pointer-events:none;display:none;}
+.fm-tip.on{display:block;}
 .fm-rec{position:absolute;top:10px;left:12px;color:#ff4d4d;font:600 14px 'DM Mono',monospace;text-shadow:0 1px 3px #000;}
 .fm-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#05090f;}
 .fm-net{font-size:12px;color:var(--muted);margin-right:auto;}
@@ -884,6 +886,7 @@ table.mh .ms-name select{font-size:12px;padding:6px 4px;}
     <button class="btn btn-ghost btn-sm" onclick="confirmExit()">&larr; Back</button>
     <span id="matchLabelTag" style="flex:1;text-align:center;"></span>
     <button class="btn btn-ghost btn-sm" id="dispBtn" style="margin-right:6px;padding:5px 9px;" onclick="dispSheet()" aria-label="Show on a big screen">&#128250;</button>
+    <button class="btn btn-ghost btn-sm" id="filmBtn" style="margin-right:6px;padding:5px 9px;" onclick="filmSheet()" aria-label="Film this bout">&#127909;</button>
     <span class="badge badge-gold" id="statusBadge">LIVE</span>
   </div>
 
@@ -2721,6 +2724,7 @@ function confirmDiscardMatch(){
     stopTimer(); releaseWake();
     M = null;
     try { Store.set(AUTO_KEY, null); clearTimeout(autoUpT); autoUpT = null; } catch(e){}
+    try { dispStop(true); } catch(e){}   // a discarded bout also ends its big-screen / filming code
     show('setup');
     toast('Match discarded');
   });
@@ -2745,6 +2749,7 @@ function discardAndExit(){
   stopTimer(); if (brk.active) stopBreak(); releaseWake();
   closeSheet('exitSaveSheet');
   try { liveReleaseOnExit(M); } catch(e){}
+  try { dispStop(true); } catch(e){}
   show('setup');
 }
 /* A Fencing Live bout left before anything was scored goes back to "upcoming" and is unlocked,
@@ -4571,6 +4576,7 @@ function autoOnHide(){
 document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') autoOnHide(); });
 window.addEventListener('pagehide', autoOnHide);
 function autoResumeCheck(){
+  if (FM || DV) return;   // filming or showing a big screen: don't interrupt with the unfinished-bout prompt
   var rec = Store.get(AUTO_KEY, null);
   if (!rec || !rec.m || typeof rec.m !== 'object' || rec.m.savedFlag) return;
   if (Date.now() - (rec.at||0) > 3*24*3600*1000){ Store.set(AUTO_KEY, null); return; }
@@ -8135,7 +8141,7 @@ function kofiOpen(note){
 function commTabs(){
   var t = [];
   if (appAppeals().length) t.push(['appeals', 'Appeals']);
-  t.push(['pioneers', ((APP_CFG && APP_CFG.pioneers && APP_CFG.pioneers.title) || 'Starport Pioneers').replace(/^Starport\s+/i, '')]);
+  t.push(['pioneers', ((APP_CFG && APP_CFG.pioneers && APP_CFG.pioneers.title) || 'Starport Pioneers Program').replace(/^Starport\s+/i, '')]);
   if (appPartnerOn()) t.push(['partners', 'Partners']);
   if (((APP_CFG && APP_CFG.athletes) || []).length) t.push(['athletes', 'Athletes']);
   return t;
@@ -8165,19 +8171,7 @@ function commAppeals(){
     L.map(appealHtml).join('') +
     (appCanPay() ? '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="donateOpen()">💛 About our cause &amp; donations</button></div>' : '');
 }
-function commPartners(){
-  var p = APP_CFG.partner || {}, web = LIVE_PUBLIC_URL || lvBaseUrl();
-  var kofi = p.kofiUrl || ((APP_CFG.donate || {}).url) || '', page = p.pageUrl || (web ? web.replace(/\/?$/, '/') + 'partners.html' : '');
-  var storeApp = isNative() && !((APP_CFG.donate || {}).inApp), offers = (APP_CFG.offers || []);
-  function btn(href, label, gold){ return '<a class="btn ' + (gold ? 'btn-gold' : 'btn-ghost') + ' btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(href) + '"' + (/^mailto:/.test(href) ? '' : ' target="_blank" rel="noopener" onclick="return donateGo(this.href)"') + '>' + label + '</a>'; }
-  var names = []; offers.forEach(function(o){ if (names.indexOf(o.partner) < 0) names.push(o.partner); });
-  return '<div class="lv-card"><div class="lv-team-name">🤝 ' + esc(p.title || 'Partner with us') + '</div><div class="dn-text" style="margin-top:8px;">' + esc(p.text || '') + '</div>' +
-    '<div class="sheet-row" style="flex-direction:column;gap:8px;">' +
-    (p.email ? btn('mailto:' + p.email + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) : '') +
-    (page ? btn(page, 'How we partner: levels &amp; benefits', false) : '') +
-    (kofi && !storeApp ? btn(kofi, 'Partners, shop &amp; support on Ko-fi', false) : '') + '</div></div>' +
-    (names.length ? '<div class="lv-card"><div class="lv-team-name">Our community partners</div><div class="lv-sub">Thank you to the businesses supporting our athletes and Pioneers.</div>' + names.map(function(n){ return '<div class="ap-item"><span>' + esc(n) + '</span></div>'; }).join('') + '</div>' : '');
-}
+function commPartners(){ return partnerHtml(); }
 function commAthletes(){
   var L = (APP_CFG.athletes || []);
   return '<div class="lv-sub" style="margin-top:0;">Athletes we support. Each athlete chose to be listed here.</div>' +
@@ -8185,11 +8179,11 @@ function commAthletes(){
     '<div class="lv-sub">Are you an athlete who needs support, or ready for sponsors? Email ' + esc((APP_CFG.partner || {}).email || 'portusstellaelab@gmail.com') + '.</div>';
 }
 /* --- Starport Pioneers --- */
-function pioCfg(){ return (APP_CFG && APP_CFG.pioneers) || { open:false, spots:20, title:'Starport Pioneers', text:'' }; }
+function pioCfg(){ return (APP_CFG && APP_CFG.pioneers) || { open:false, spots:20, title:'Starport Pioneers Program', text:'' }; }
 function commPioneers(){
   var p = pioCfg(), card = Store.get('starport_card', null), left = Math.max(0, (p.spots | 0) - (p.taken | 0));
   return '<div id="cmCard"></div>' +
-    '<div class="lv-card"><div class="lv-team-name">🚀 ' + esc(p.title || 'Starport Pioneers') + '</div>' +
+    '<div class="lv-card"><div class="lv-team-name">🚀 ' + esc(p.title || 'Starport Pioneers Program') + '</div>' +
     (p.text ? '<div class="dn-text" style="margin-top:8px;">' + donateFmt(p.text) + '</div>' : '') +
     '<div class="lv-sub">' + (p.open ? (left ? left + ' of ' + (p.spots | 0) + ' places left' : 'All places are taken: you can still apply for the waitlist') : 'Applications are closed at the moment.') + '</div>' +
     (p.open && !card ? '<button class="btn btn-gold btn-block" onclick="pioApplySheet()">Apply to join</button>' : '') + '</div>' +
@@ -8200,7 +8194,7 @@ function pioApplySheet(){
   var p = pioCfg();
   var st = ['VIC', 'NSW', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT', 'Outside Australia'];
   var roles = ['Athlete', 'Coach', 'Referee / official', 'Manager / organiser', 'Athlete and coach', 'Other'];
-  lvSheet('<div class="sheet-title">🚀 Join ' + esc(p.title || 'Starport Pioneers') + '</div>' +
+  lvSheet('<div class="sheet-title">🚀 Join ' + esc(p.title || 'Starport Pioneers Program') + '</div>' +
     '<label>Full name</label><input id="pjName" maxlength="80" autocomplete="name">' +
     '<label style="margin-top:10px;">Email</label><input id="pjEmail" type="email" maxlength="120" autocomplete="email">' +
     '<label style="margin-top:10px;">Mobile (optional)</label><input id="pjPhone" type="tel" maxlength="30" autocomplete="tel">' +
@@ -8246,7 +8240,7 @@ function cardDraw(){
   var el = document.getElementById('cmCard'); if (!el) return;
   var code = CM.check || Store.get('starport_card', null); if (!code){ el.innerHTML = ''; return; }
   var check = !!CM.check;
-  el.innerHTML = '<div class="pc-card"><div class="pc-top">STARPORT PIONEERS</div><div class="lv-sub" style="color:#cfd8e6;">Checking card…</div></div>';
+  el.innerHTML = '<div class="pc-card"><div class="pc-top">STARPORT PIONEERS PROGRAM</div><div class="lv-sub" style="color:#cfd8e6;">Checking card…</div></div>';
   liveFetch('GET', '/cards/' + code).then(function(r){
     if (!document.getElementById('cmCard')) return;
     if (!r.ok || !r.data || !r.data.ok){
@@ -8255,12 +8249,12 @@ function cardDraw(){
       return;
     }
     var d = r.data, offers = d.active ? ((APP_CFG && APP_CFG.offers) || []) : [];
-    el.innerHTML = '<div class="pc-card' + (d.active ? '' : ' off') + '"><div class="pc-top">STARPORT PIONEERS<span>' + esc(d.no) + '</span></div>' +
+    el.innerHTML = '<div class="pc-card' + (d.active ? '' : ' off') + '"><div class="pc-top">STARPORT PIONEERS PROGRAM<span>' + esc(d.no) + '</span></div>' +
       '<div class="pc-name">' + esc(d.name) + '</div><div class="pc-meta">' + esc([d.sport, d.role].filter(Boolean).join(' · ')) + '</div>' +
       '<div class="pc-row"><div><div class="pc-state">' + (d.active ? '✔ Valid member' : '✖ Not active') + '</div><div class="pc-meta">Member since ' + esc(new Date(d.since).toLocaleDateString('en-AU', { month:'short', year:'numeric' })) + (d.group ? ' · ' + esc(d.group) : '') + '</div>' +
       '<div class="pc-meta">Checked ' + esc(new Date().toLocaleString('en-AU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })) + '</div></div>' +
       (check ? '' : '<div id="pcQr" class="pc-qr"></div>') + '</div></div>' +
-      (check ? '<div class="lv-sub" style="text-align:center;">This is a live check of a Starport Pioneers card.</div><div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="CM.check=null;commRender()">Close</button></div>' :
+      (check ? '<div class="lv-sub" style="text-align:center;">This is a live check of a Starport Pioneers Program card.</div><div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="CM.check=null;commRender()">Close</button></div>' :
       '<div class="lv-sub" style="text-align:center;">Show this card at partner shops. They can scan the QR to check it.</div>' +
       (offers.length ? '<div class="lv-card"><div class="lv-team-name">🎁 Your member offers</div>' + offers.map(function(o){ return '<div class="ap-item"><span><b>' + esc(o.partner) + '</b>: ' + esc(o.offer) + (o.where || o.how ? '<br><em>' + esc([o.where, o.how].filter(Boolean).join(' · ')) + '</em>' : '') + '</span></div>'; }).join('') + '</div>' : '') +
       '<div style="text-align:right;margin:-4px 0 10px;"><button class="btn btn-ghost btn-sm" onclick="cardForget()">Remove card from this device</button></div>');
@@ -8275,6 +8269,7 @@ function appCfgApply(){
   if (el) el.innerHTML = (n && n.on && n.text) ? '<div class="app-note">📣 ' + esc(n.text) + '</div>' : '';
   if (document.getElementById('commView') && document.getElementById('commView').classList.contains('on')) commRender();
   var html = (appDonateOn() ? '<button class="app-link gold" onclick="donateOpen()">💛 Support this app</button>' : '') +
+             (appPartnerOn() ? '<button class="app-link gold" onclick="partnerOpen()">\uD83E\uDD1D Partner with us</button>' : '') +
              '<button class="app-link gold" onclick="commOpen()">\uD83C\uDF1F Community</button>' +
              '<button class="app-link" onclick="webQrOpen()">\uD83D\uDCF1 Open on another device</button>' +
              (appFeedbackOn() ? '<button class="app-link" onclick="fbOpen()">💬 Send feedback</button>' : '') +
@@ -8307,20 +8302,31 @@ function donateFmt(t){
 /* Partners & sponsors: shown in every version (no donation request, so it suits the store app too).
    The Ko-fi / partners page link only shows where donations are allowed (the website). */
 function appPartnerOn(){ var p = APP_CFG && APP_CFG.partner; return !!(p && p.on !== false && (p.text || p.email)); }
-function partnerOpen(){
-  if (!appPartnerOn()) return;
-  var p = APP_CFG.partner, web = LIVE_PUBLIC_URL || lvBaseUrl();
-  var kofi = p.kofiUrl || ((APP_CFG.donate || {}).url) || '', page = p.pageUrl || (web ? web.replace(/\/?$/, '/') + 'partners.html' : '');
-  // the store app can't link to a donation page (Google Play rule for non-charities): it only opens the website's Partners page, which links on to Ko-fi
+function partnerHtml(){
+  var p = APP_CFG.partner || {};
+  var kofi = p.kofiUrl || ((APP_CFG.donate || {}).url) || '';
+  // the store app can't link to an outside payment page (Google Play rule for non-charities), so it leaves out the Ko-fi button
   var storeApp = isNative() && !((APP_CFG.donate || {}).inApp);
   function btn(href, label, gold){ return '<a class="btn ' + (gold ? 'btn-gold' : 'btn-ghost') + ' btn-block" style="display:block;text-align:center;text-decoration:none;" href="' + esc(href) + '"' + (/^mailto:/.test(href) ? '' : ' target="_blank" rel="noopener" onclick="return donateGo(this.href)"') + '>' + label + '</a>'; }
-  lvSheet('<div class="sheet-title">🤝 ' + esc(p.title || 'Partner with us') + '</div>' +
-    '<div class="dn-text">' + esc(p.text || '') + '</div>' +
-    '<div class="sheet-row" style="flex-direction:column;gap:8px;margin-top:0;">' +
-    (p.email ? btn('mailto:' + p.email + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) : '') +
-    (page ? btn(page, 'How we partner: levels &amp; benefits', false) : '') +
-    (kofi && !storeApp ? btn(kofi, 'Partners, shop &amp; support on Ko-fi', false) : '') +
-    '<button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>');
+  var buttons = (p.email ? btn('mailto:' + p.email + '?subject=' + encodeURIComponent('Partnership with Starport Fencing'), '✉ Become a partner', true) : '') +
+    (kofi && !storeApp ? btn(kofi, 'Partners, shop &amp; support on Ko-fi', false) : '');
+  var partners = (APP_CFG.partners || []).slice();
+  if (!partners.length) (APP_CFG.offers || []).forEach(function(o){ if (!partners.some(function(x){ return x.name === o.partner; })) partners.push({ name:o.partner, kind:'Community partner' }); });
+  var ath = APP_CFG.athletes || [];
+  return (p.text ? '<div class="dn-text">' + donateFmt(p.text) + '</div>' : '') +
+    (p.how ? '<div class="dn-text">' + donateFmt(p.how) + '</div>' : '') +
+    (buttons ? '<div class="sheet-row" style="flex-direction:column;gap:8px;margin-top:0;">' + buttons + '</div>' : '') +
+    '<div class="lv-card" style="margin-top:14px;"><div class="lv-team-name">Our partners</div>' +
+      (partners.length ? partners.map(function(x){ var nm = x.url && !storeApp ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener" onclick="return donateGo(this.href)">' + esc(x.name) + '</a>' : esc(x.name); return '<div class="ap-item"><span><b>' + nm + '</b>' + (x.kind ? '<br><em>' + esc(x.kind) + '</em>' : '') + '</span></div>'; }).join('')
+        : '<div class="lv-sub" style="margin-bottom:0;">Become our first partner: your name could be the first one here.</div>') + '</div>' +
+    (ath.length ? '<div class="lv-card"><div class="lv-team-name">Athletes we support</div><div class="lv-sub" style="margin:4px 0 0;">Each athlete chose to be listed here.</div>' +
+      ath.map(function(a){ return '<div class="ap-item"><span><b>' + esc(a.name) + '</b><br><em>' + esc([a.sport, a.goal].filter(Boolean).join(' \u00b7 ')) + '</em></span></div>'; }).join('') + '</div>' : '');
+}
+function partnerOpen(){
+  if (!appPartnerOn()) return;
+  var p = APP_CFG.partner;
+  lvSheet('<div class="sheet-title">🤝 ' + esc(p.title || 'Partner with us') + '</div>' + partnerHtml() +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCloseSheet()">Close</button></div>');
 }
 /* QR code + link to the web version, to open Starport on a phone, tablet or laptop */
 function webQrOpen(){
@@ -8418,7 +8424,8 @@ function dispSend(){
     if (r.status === 401){ DISP = null; Store.set('starport_disp', null); dispBtnState(); toast('That screen code was taken — tap 📺 to make a new one'); }
   });
 }
-function dispBtnState(){ var b = document.getElementById('dispBtn'); if (b){ b.className = 'btn btn-sm ' + (DISP ? 'btn-gold' : 'btn-ghost'); b.textContent = DISP ? '📺 ' + DISP.code : '📺'; } }
+function dispBtnState(){ var b = document.getElementById('dispBtn'); if (b){ b.className = 'btn btn-sm ' + (DISP ? 'btn-gold' : 'btn-ghost'); b.textContent = DISP ? '📺 ' + DISP.code : '📺'; }
+  var f = document.getElementById('filmBtn'); if (f) f.className = 'btn btn-sm ' + (DISP ? 'btn-gold' : 'btn-ghost'); }
 function dispSheet(){
   if (!dispOk()){ toast('Big-screen scoreboards need Fencing Live (internet)'); return; }
   if (!DISP){
@@ -8434,9 +8441,13 @@ function dispSheet(){
     '<div id="dispQr" class="lv-qr"></div>' +
     '<div class="lv-poster-n" style="text-align:center;font-size:44px;letter-spacing:6px;margin:4px 0;">' + esc(DISP.code) + '</div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + link + '\')">Copy link</button><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>' +
-    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="dispFilmSheet()">🎥 Film this bout</button></div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" style="color:var(--red2);border-color:rgba(231,76,60,.4);" onclick="dispStop()">Stop this screen</button></div>');
   lvQrInto('dispQr', link, 200);
+}
+function filmSheet(){
+  if (!dispOk()){ toast('Filming with the live score needs Fencing Live (internet)'); return; }
+  if (!DISP){ DISP = { code:lvCode(), token:lvNonce() + lvNonce().slice(0, 8) }; Store.set('starport_disp', DISP); DISP_LAST.sig = ''; dispBtnState(); dispMaybe(true); }
+  dispFilmSheet();
 }
 function dispFilmSheet(){
   if (!DISP) return;
@@ -8444,7 +8455,8 @@ function dispFilmSheet(){
   lvSheet('<div class="sheet-title">🎥 Film this bout ' + esc(DISP.code) + '</div>' +
     '<div class="lv-sub" style="margin-top:0;">A fencer, coach or parent scans this QR to film the bout on their phone with the live score, timer and cards along the bottom. The side that scores lights up red or green. They can save the video or share it.</div>' +
     '<div style="text-align:center;"><div id="filmQr" class="lv-qr"></div></div>' +
-    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + link + '\')">Copy film link</button><button class="btn btn-gold btn-block" onclick="dispSheet()">Back</button></div>' +
+    '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + link + '\')">Copy film link</button><button class="btn btn-gold btn-block" onclick="lvCloseSheet()">Done</button></div>' +
+    '<div class="lv-sub">Uses the same code as \uD83D\uDCFA Show on a big screen, so a big screen and phones filming can follow this bout together.</div>' +
     '<div class="lv-sub"><b>Live streaming:</b> in OBS or a streaming app, add a Browser source with the link below. It shows the score bar on a see-through background over your camera.</div>' +
     '<div class="sheet-row"><button class="btn btn-ghost btn-block" onclick="lvCopy(\'' + ov + '\')">Copy streaming overlay link</button></div>');
   lvQrInto('filmQr', link, 200);
@@ -8454,10 +8466,10 @@ function dispCreate(){
   Store.set('starport_disp', DISP); DISP_LAST.sig = '';
   dispBtnState(); dispMaybe(true); dispSheet();
 }
-function dispStop(){
+function dispStop(quiet){
   var d = DISP; if (!d) return;
-  DISP = null; Store.set('starport_disp', null); dispBtnState(); lvCloseSheet();
-  liveFetch('PUT', '/displays/' + d.code, { token:d.token, end:true }).then(function(){ toast('Screen stopped'); });
+  DISP = null; Store.set('starport_disp', null); dispBtnState(); if (!quiet) lvCloseSheet();
+  liveFetch('PUT', '/displays/' + d.code, { token:d.token, end:true }).then(function(){ if (!quiet) toast('Screen stopped'); });
 }
 /* ----- the screen itself ----- */
 function dispOpenFromInput(){ var c = String(lvVal('dvCodeIn') || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length !== 6){ toast('Screen codes have 6 characters'); return; } dispOpen(c); }
@@ -8545,8 +8557,9 @@ function filmOpen(code, mode){
   var root = document.getElementById('fmRoot');
   root.className = 'fmv' + (FM.mode === 'overlay' ? ' ovl' : '');
   root.innerHTML = FM.mode === 'overlay' ? '<canvas id="fmCanvas"></canvas>' :
-    '<video id="fmVideo" playsinline muted autoplay></video><div class="fm-stage"><canvas id="fmCanvas"></canvas><div class="fm-rec" id="fmRecTag"></div></div>' +
+    '<video id="fmVideo" playsinline muted autoplay></video><div class="fm-stage"><canvas id="fmCanvas"></canvas><div class="fm-rec" id="fmRecTag"></div><div class="fm-tip" id="fmTip">Turn your phone sideways (or tap ⤾ Wide) to film a wide video</div></div>' +
     '<div class="fm-bar"><span class="fm-net" id="fmNet"></span>' +
+      '<button class="btn btn-ghost btn-sm" id="fmRot" onclick="filmRotate()" title="Film wide (landscape)">⤾ Wide</button>' +
       '<button class="btn btn-ghost btn-sm" onclick="filmFlip()" title="Switch camera">⟲</button>' +
       '<button class="btn btn-ghost btn-sm" id="fmMic" onclick="filmMicToggle()">🎙 On</button>' +
       '<button class="fm-recbtn" id="fmRecBtn" onclick="filmRecToggle()" aria-label="Record"><i></i></button>' +
@@ -8597,6 +8610,7 @@ function filmLoop(){
   }
   filmDrawScore(ctx, c.width, c.height, now, false);
   if (FM.rec){ var t = document.getElementById('fmRecTag'); if (t) t.textContent = '● REC ' + dispClock((now - FM.recAt) / 1000); }
+  var tip = document.getElementById('fmTip'); if (tip){ var port = innerHeight > innerWidth && !FM.rec; if (tip.classList.contains('on') !== port) tip.classList.toggle('on', port); }
 }
 function filmFit(ctx, text, size, maxW, family){
   var f = size;
@@ -8743,8 +8757,31 @@ function filmSave(){
   setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
   toast('Video saved'); lvCloseSheet();
 }
+/* Film wide: lock the screen to landscape. Store app: native plugin. Android browsers: full screen + lock.
+   iPhone Safari can't lock, so it asks the user to turn the phone. */
+function filmRotate(){
+  if (!FM) return;
+  if (FM.rec){ toast('Stop recording to change the screen'); return; }
+  var SO = capPlugin('ScreenOrientation');
+  if (FM.wide){ filmUnlock(); FM.wide = false; filmRotLabel(); return; }
+  var done = function(){ FM.wide = true; filmRotLabel(); };
+  if (SO && SO.lock){ SO.lock({ orientation:'landscape' }).then(done, function(){ toast('Turn your phone sideways to film wide'); }); return; }
+  var el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+  var lock = function(){ try { return screen.orientation.lock('landscape'); } catch(e){ return Promise.reject(e); } };
+  var fail = function(){ toast('Turn your phone sideways to film wide (switch off rotation lock if it doesn\u2019t turn)'); };
+  if (!screen.orientation || !screen.orientation.lock){ fail(); return; }
+  if (fs && !document.fullscreenElement){ Promise.resolve(fs.call(el)).then(lock).then(done, fail); }
+  else lock().then(done, fail);
+}
+function filmUnlock(){
+  var SO = capPlugin('ScreenOrientation');
+  try { if (SO && SO.unlock) SO.unlock(); else if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch(e){}
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
+}
+function filmRotLabel(){ var b = document.getElementById('fmRot'); if (b && FM) b.textContent = FM.wide ? '⤿ Upright' : '⤾ Wide'; }
 function filmClose(){
   if (!FM) return;
+  if (FM.wide) filmUnlock();
   if (FM.rec){ try { FM.rec.onstop = null; FM.rec.stop(); } catch(e){} }
   cancelAnimationFrame(FM.raf);
   try { FM.sub && FM.sub.close && FM.sub.close(); } catch(e){}
