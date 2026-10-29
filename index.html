@@ -1445,7 +1445,7 @@ function renderRosterInputs(){
     var html = '';
     for (var i=0;i<4;i++){
       html += '<div class="roster-row">' +
-        '<div class="rnum">Fencer ' + (i+1) + '</div>' +
+        '<div class="rnum">' + (i < 3 ? 'Fencer ' + (i+1) : 'Reserve (R)') + '</div>' +
         '<input id="r'+side+i+'name" placeholder="Name">' +
         '<div style="display:flex;gap:6px;margin-top:6px;">' +
           '<select id="r'+side+i+'country" style="flex:0 0 44%;"></select>' +
@@ -5938,7 +5938,7 @@ function lhOrdRender(){
   var isRef = O.mode === 'ref';
   if (O.after){        // before scoring: only the line-up, as on the paper score sheet
     lvSheet('<div class="sheet-title">\uD83D\uDCCB Confirm the line-up</div>' +
-      '<div class="lv-sub" style="margin-top:0;">Check each team\u2019s positions against the score sheet: 1, 2, 3 (and 4, 5, 6) fence the FIE order; R is the reserve and only comes in if you swap them in. Pick anyone in the team, or type someone else.</div>' +
+      '<div class="lv-sub" style="margin-top:0;">Check each team\u2019s positions against the score sheet: fencers 1, 2 and 3 fence the FIE order; R is the reserve and only comes in if you swap them in. Pick anyone in the team, or type someone else.</div>' +
       lhLuHtml(O) +
       '<div class="sheet-row" style="flex-direction:column;gap:8px;"><button class="btn btn-gold btn-block" id="loSave" onclick="lhLuConfirm()">Confirm line-up and ' + (O.after === 'paper' ? 'enter the score' : 'start scoring') + '</button>' +
       '<button class="btn btn-ghost btn-block" onclick="lhLuSkip()">Skip \u2014 keep the order as it is</button></div>');
@@ -5974,7 +5974,7 @@ function lhLuHtml(O){
         '<input id="lu' + sd + k + 'n" maxlength="40" placeholder="Name" style="display:none;flex:1;min-width:0;"></div>';
     }).join('') + '</div>';
   }
-  return side('A', O.teamA, ['1','2','3','R']) + side('B', O.teamB, ['4','5','6','R']);
+  return side('A', O.teamA, ['1','2','3','R']) + side('B', O.teamB, ['1','2','3','R']);
 }
 function lhLuRead(sd){
   var out = [];
