@@ -431,6 +431,17 @@ label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-trans
 .lu-row input{flex:1;min-width:0;}
 .lu-pos{flex:0 0 30px;height:30px;line-height:30px;text-align:center;border-radius:50%;background:rgba(201,162,39,.15);color:var(--gold);font-weight:700;}
 .pg-more summary{cursor:pointer;color:var(--gold);font-size:14px;margin-top:6px;}
+.mf.pin{border-color:rgba(201,162,39,.6);}
+.mf-head{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.mf-new{background:var(--gold);color:var(--navy);font-weight:700;font-size:10px;border-radius:8px;padding:1px 6px;letter-spacing:.05em;}
+.mf-title{font-weight:700;font-size:16px;margin-top:6px;}
+.mf-poll{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+.mf-opt{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--white);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;cursor:pointer;}
+.mf-opt i{position:absolute;left:0;top:0;bottom:0;background:rgba(201,162,39,.22);}
+.mf-opt span,.mf-opt b{position:relative;}
+.mf-opt.me{border-color:var(--gold);}
+.mf-opt:disabled{cursor:default;}
+.mf-badge{display:inline-block;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:#e53935;color:#fff;font-size:11px;font-weight:700;text-align:center;padding:0 5px;margin-left:6px;}
 .pc-card{background:linear-gradient(135deg,#1b2f52 0%,#0d1a30 60%,#2a2410 100%);border:1px solid rgba(201,162,39,.6);border-radius:16px;padding:16px;margin-bottom:10px;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.35);}
 .pc-card.off{filter:grayscale(1);opacity:.75;}
 .pc-top{display:flex;justify-content:space-between;font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;color:var(--gold);font-size:18px;}
@@ -8190,14 +8201,14 @@ function commOpen(tab){
 function commRender(){
   var root = document.getElementById('cmBody'); if (!root) return;
   var tabs = commTabs(); if (CM.auto || !tabs.some(function(x){ return x[0] === CM.tab; })) CM.tab = tabs[0][0];
-  document.getElementById('cmTabs').innerHTML = tabs.map(function(x){ return '<button class="lv-tab' + (x[0] === CM.tab ? ' on' : '') + '" onclick="CM.auto=false;CM.tab=\'' + x[0] + '\';commRender()">' + esc(x[1]) + '</button>'; }).join('');
+  document.getElementById('cmTabs').innerHTML = tabs.map(function(x){ return '<button data-t="' + x[0] + '" class="lv-tab' + (x[0] === CM.tab ? ' on' : '') + '" onclick="CM.auto=false;CM.tab=\'' + x[0] + '\';commRender()">' + esc(x[1]) + '</button>'; }).join('');
   var h = '';
   if (CM.tab === 'appeals') h = commAppeals();
   else if (CM.tab === 'members') h = commMembers();
   else if (CM.tab === 'partners') h = commPartners();
   else h = commAthletes();
   root.innerHTML = h;
-  if (CM.tab === 'members') cardDraw();
+  if (CM.tab === 'members'){ cardDraw(); feedLoad(true); }
   if (CM.join && CM.tab === 'members' && APP_CFG && (APP_CFG.programs || APP_CFG.pioneers)){   // wait for the real settings
     var jp = progOf(CM.join);
     if (jp){
@@ -8248,7 +8259,7 @@ function myCards(){
 function myProgs(){ var m = Store.get('starport_cardprog', null) || {}, out = {}; myCards().forEach(function(c){ if (m[c]) out[m[c]] = true; }); return out; }
 function commMembers(){
   var P = progs(), many = P.length > 1, mine = myProgs();
-  return '<div id="cmCards"></div>' +
+  return '<div id="cmCards"></div><div id="cmFeed"></div>' +
     (P.length ? '' : '<div class="lv-sub" style="margin-top:0;">No member programs are open at the moment.</div>') +
     P.map(function(p){
       var left = p.spots ? Math.max(0, (p.spots | 0) - (p.taken | 0)) : -1;
@@ -8341,6 +8352,57 @@ function cardDraw(){
     });
   });
 }
+/* --- 📣 member updates and polls (only for active member cards) --- */
+var MF = { posts:[], at:0, busy:false, codes:{} };
+function feedSeen(){ return +(Store.get('starport_feed_seen', 0) || 0); }
+function feedUnread(){ var t = feedSeen(); return MF.posts.filter(function(p){ return p.at > t; }).length; }
+function feedLoad(render){
+  var codes = myCards(); if (!codes.length || !LIVE_DB || !liveIsCF()){ MF.posts = []; feedBadge(); if (render) feedDraw(); return; }
+  if (MF.busy) return; MF.busy = true;
+  var got = {}, left = codes.length, progOfPost = {};
+  codes.forEach(function(code){
+    liveFetch('GET', '/members/feed/' + code).then(function(r){
+      if (r.ok && r.data && r.data.ok) (r.data.posts || []).forEach(function(p){ if (!got[p.id]){ got[p.id] = p; MF.codes[p.id] = code; } });
+      if (--left) return;
+      MF.busy = false; MF.at = Date.now();
+      MF.posts = Object.keys(got).map(function(k){ return got[k]; }).sort(function(a, b){ return (b.pin - a.pin) || (b.at - a.at); });
+      feedBadge(); if (render || document.getElementById('cmFeed')) feedDraw();
+    });
+  });
+}
+function feedTagOf(p){ var t = p.targets || ['all']; if (t.indexOf('all') >= 0) return 'All members'; return t.map(function(id){ var x = progOf(id); return x ? x.title : ''; }).filter(Boolean).join(', '); }
+function feedDraw(){
+  var el = document.getElementById('cmFeed'); if (!el) return;
+  if (!myCards().length || !MF.posts.length){ el.innerHTML = ''; return; }
+  var seen = feedSeen();
+  el.innerHTML = '<div class="lv-team-name" style="margin:4px 0 8px;">📣 Member updates</div>' + MF.posts.map(function(p){
+    var head = '<div class="mf-head">' + (p.pin ? '📌 ' : '') + (p.at > seen ? '<span class="mf-new">NEW</span> ' : '') + '<span>' + esc(feedTagOf(p)) + ' · ' + esc(new Date(p.at).toLocaleDateString('en-AU', { day:'numeric', month:'short' })) + '</span></div>';
+    var body = (p.title ? '<div class="mf-title">' + esc(p.title) + '</div>' : '') + (p.text ? '<div class="dn-text" style="margin:6px 0 0;">' + donateFmt(p.text) + '</div>' : '');
+    if (p.kind === 'poll'){
+      var tot = (p.counts || []).reduce(function(a, b){ return a + b; }, 0), show = p.mine >= 0 || p.closed;
+      body += '<div class="mf-poll">' + p.options.map(function(o, i){
+        var n = (p.counts || [])[i] || 0, pc = tot ? Math.round(n * 100 / tot) : 0, me = p.mine === i;
+        return '<button class="mf-opt' + (me ? ' me' : '') + '"' + (p.closed ? ' disabled' : '') + ' onclick="feedVote(\'' + p.id + '\',' + i + ')">' + (show ? '<i style="width:' + pc + '%"></i>' : '') + '<span>' + (me ? '✔ ' : '') + esc(o) + '</span>' + (show ? '<b>' + pc + '%</b>' : '') + '</button>';
+      }).join('') + '<div class="lv-sub" style="margin:4px 0 0;">' + tot + ' vote' + (tot === 1 ? '' : 's') + (p.closed ? ' · closed' : (p.mine >= 0 ? ' · tap another option to change your vote' : ' · tap to vote')) + (p.closes && !p.closed ? ' · closes after ' + esc(auDate(p.closes)) : '') + '</div></div>';
+    }
+    return '<div class="lv-card mf' + (p.pin ? ' pin' : '') + '">' + head + body + '</div>';
+  }).join('');
+  // everything on screen now counts as read
+  var newest = MF.posts.reduce(function(a, p){ return Math.max(a, p.at); }, 0);
+  if (newest > seen){ setTimeout(function(){ Store.set('starport_feed_seen', newest); feedBadge(); }, 1500); }
+}
+function feedVote(id, opt){
+  var p = MF.posts.filter(function(x){ return x.id === id; })[0], code = MF.codes[id]; if (!p || !code || p.closed) return;
+  liveFetch('POST', '/members/vote/' + code, { post:id, opt:opt }).then(function(r){
+    if (!r.ok || !r.data || !r.data.ok){ toast((r.data && r.data.error) || 'Couldn’t vote. Check your internet.'); return; }
+    p.counts = r.data.counts; p.mine = r.data.mine; feedDraw(); haptic(false);
+  });
+}
+function feedBadge(){
+  var n = feedUnread();
+  [].forEach.call(document.querySelectorAll('.app-link[onclick="commOpen()"]'), function(b){ var s = b.querySelector('.mf-badge'); if (n){ if (!s){ s = document.createElement('span'); s.className = 'mf-badge'; b.appendChild(s); } s.textContent = n; } else if (s) s.remove(); });
+  var t = document.querySelector('#cmTabs .lv-tab[data-t="members"]'); if (t){ var s2 = t.querySelector('.mf-badge'); if (n){ if (!s2){ s2 = document.createElement('span'); s2.className = 'mf-badge'; t.appendChild(s2); } s2.textContent = n; } else if (s2) s2.remove(); }
+}
 function cardForget(code){ Store.set('starport_cards', myCards().filter(function(c){ return c !== code; })); commRender(); }
 function appDonateOn(){ var d = APP_CFG && APP_CFG.donate; return !!(d && d.on && /^https:\/\//i.test(d.url || '') && (!isNative() || d.inApp)); }
 function appFeedbackOn(){ return !!(LIVE_DB && liveIsCF() && !(APP_CFG && APP_CFG.feedback && APP_CFG.feedback.on === false)); }
@@ -8355,6 +8417,7 @@ function appCfgApply(){
              (appFeedbackOn() ? '<button class="app-link" onclick="fbOpen()">💬 Send feedback</button>' : '') +
              '<button class="app-link" onclick="appGuide()">📖 User guide</button>';
   var els = document.querySelectorAll('.app-links'); for (var i = 0; i < els.length; i++) els[i].innerHTML = html;
+  try { if (myCards().length && Date.now() - MF.at > 60000) feedLoad(false); else feedBadge(); } catch(e){}
 }
 function appCfgLoad(){
   appCfgApply();
