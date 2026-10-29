@@ -80,7 +80,7 @@ th{color:var(--mut);font-weight:600;font-size:13px;text-transform:uppercase;lett
 <li><b>Cards</b>: yellow and red (a red gives the opponent a touch), with a full-screen flash so everyone sees the call.</li>
 <li><b>Épée</b>: the double-touch button scores both fencers at once. The optional passivity timer (⚙ settings) runs a one-minute no-touch clock and prompts for P-cards (P-red then P-black from 1 Sep 2026, or the earlier P-yellow ladder if you turn it on).</li>
 <li><b>Sabre DE</b>: two halves with a break when a fencer reaches half the target, instead of timed periods.</li>
-<li><b>Video review</b>: one review per fencer per bout, kept when a call is overturned.</li>
+<li><b>Video review</b> (FIE t.61): each fencer has <b>1</b> appeal in a pool bout, <b>2</b> in a direct elimination bout, and <b>1 per relay bout</b> in a team match. The appeal is kept when the call is overturned, and the action can be shown up to 4 times. The button shows how many are left.</li>
 <li><b>⇄</b> between the names swaps the sides on screen to match where the fencers stand.</li>
 </ul>
 <h3>Timer</h3>
@@ -127,11 +127,12 @@ th{color:var(--mut);font-weight:600;font-size:13px;text-transform:uppercase;lett
 <p>Use <b>⟲ Flip</b> to switch to the front camera and <b>🎙</b> to turn sound on or off (before recording).</p>
 
 <h3>⏪ Slow-motion replay of the last point</h3>
-<p>The app always keeps the last 7 seconds of what the camera sees, with the score bar.</p>
+<p>The app always keeps the last 20 seconds of what the camera sees, with the score bar.</p>
 <ol>
 <li>Tap <b>⏪ Replay</b>. Recording pauses while you review, and the paused part isn't added to the video.</li>
-<li>The replay plays at <b>0.25×</b> (slow motion). Pick <b>0.5×</b> or <b>1×</b> for other speeds, drag the slider to go to a moment, or tap <b>❚❚ Pause</b>.</li>
-<li>When it finishes, tap <b>↺ Review again</b> to watch it again, at the same or a different speed, up to 4 reviews per point, as in FIE video review. Or tap <b>● Keep filming</b>.</li>
+<li>The replay starts <b>5 seconds before the referee's last halt</b> (when the clock stopped) and plays until 3 seconds after it, so it lands on the action. If the clock hasn't stopped, it plays the last 6 seconds.</li>
+<li>It plays at <b>0.25×</b> (slow motion). Pick <b>0.5×</b> or <b>1×</b> for other speeds, or tap <b>❚❚ Pause</b>. The slider covers all 20 seconds: the <b style="color:#e53935;">red mark</b> is the halt, and the time next to it shows how far before or after the halt you are. Drag back to see what led up to the action.</li>
+<li>When it finishes, tap <b>↺ Review again</b> to watch it again from the start, at the same or a different speed, up to 4 times per point (FIE t.62.1). Or tap <b>● Keep filming</b>.</li>
 <li><b>Keep filming</b> carries on recording the same video. The next replay starts from new footage.</li>
 </ol>
 <div class="tip">The video stays on the filming phone: nothing is uploaded. The score comes over the internet, so keep the phone online while filming.</div>
